@@ -9,6 +9,10 @@ jobs:
           name: Build
           command: |
             cargo build
+      - run:
+          name: Test
+          command: |
+            cargo test
 
 workflows:
   version: 2
