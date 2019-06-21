@@ -5,6 +5,8 @@ authors = ["Seiichi KONDO <seikichi@kmc.gr.jp>"]
 edition = "2018"
 
 [dependencies]
+getopts = "0.2"
+rand = "0.6"
 
 [lib]
 name = "lib"
