@@ -33,7 +33,9 @@ impl Field {
         // TODO: fill obstacles inside ...
         for Map(points) in &task.obstacles {
             let mut prev = &points[0];
-            for p in points {
+            let mut ps = points.clone();
+            ps.push(points[0].clone());
+            for p in &ps {
                 if p.x > prev.x {
                     for x in prev.x..p.x {
                         field[p.y as usize][x as usize] = Square::Obstacle;
@@ -242,5 +244,4 @@ fn test_dfs() {
 
     let mut wrapper = DfsWrapper {};
     let solution = wrapper.wrap(&task);
-    println!("{:?}", solution);
 }

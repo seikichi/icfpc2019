@@ -1,7 +1,17 @@
-use lib::task::Task;
+use std::io::{self, Read};
 
-fn main() {
-    let s = "(0,0),(10,0),(10,10),(0,10)#(0,0)#(4,2),(6,2),(6,7),(4,7);(5,8),(6,8),(6,9),(5,9)#B(0,1);B(1,1);F(0,2);F(1,2);L(0,3);X(0,9)";
-    let task = Task::from(s);
-    println!("{:?}", task);
+use lib::task::Task;
+use lib::wrapper::dfs::DfsWrapper;
+use lib::wrapper::*;
+
+fn main() -> io::Result<()> {
+    let mut buffer = String::new();
+    io::stdin().read_to_string(&mut buffer)?;
+
+    let task = Task::from(&buffer);
+    let mut wrapper = DfsWrapper {};
+    let solution = wrapper.wrap(&task);
+    println!("{}", solution.to_string());
+
+    Ok(())
 }
