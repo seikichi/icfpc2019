@@ -27,7 +27,7 @@ pub struct Task {
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
-pub struct Map(Vec<Point>);
+pub struct Map(pub Vec<Point>);
 
 impl Map {
     pub fn from(s: &str) -> Self {
@@ -88,6 +88,10 @@ impl BoosterLocation {
         let point = Point::from(&s[1..]);
         Self { code, point }
     }
+
+    pub fn new(code: BoosterCode, point: Point) -> Self {
+        Self { code, point }
+    }
 }
 
 impl Point {
@@ -95,6 +99,10 @@ impl Point {
         let s = s[1..s.len() - 1].split(',').collect::<Vec<_>>();
         let x = s[0].parse::<i32>().expect("failed to parse x");
         let y = s[1].parse::<i32>().expect("failed to parse y");
+        Self { x, y }
+    }
+
+    pub fn new(x: i32, y: i32) -> Self {
         Self { x, y }
     }
 }
