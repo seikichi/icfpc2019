@@ -76,7 +76,7 @@ impl Task {
     }
     pub fn load(path: &Path) -> Self {
         let mut f = fs::File::open(path).unwrap();
-        let mut s;
+        let mut s = "".to_string();
         f.read_to_string(&mut s).unwrap();
         let ret = Task::from(&s);
         ret
