@@ -3,7 +3,6 @@ use std::io::Read;
 // use std::io::Write;
 use std::path::Path;
 
-
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Point {
     pub x: i32,
@@ -58,7 +57,7 @@ impl Map {
 
 impl Task {
     pub fn from(s: &str) -> Self {
-        let s = s.split('#').collect::<Vec<_>>();
+        let s = s.trim_end().split('#').collect::<Vec<_>>();
         let (map, point, obstacles, boosters) = (s[0], s[1], s[2], s[3]);
         let map = Map::from(map);
         let point = Point::from(point);
@@ -81,7 +80,6 @@ impl Task {
         let ret = Task::from(&s);
         ret
     }
-
 }
 
 impl BoosterCode {
