@@ -4,7 +4,7 @@ use std::io::Read;
 use std::path::Path;
 
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Point {
     pub x: i32,
     pub y: i32,
@@ -118,6 +118,50 @@ impl Point {
 
     pub fn new(x: i32, y: i32) -> Self {
         Self { x, y }
+    }
+}
+impl std::ops::Add<Point> for Point {
+    type Output = Point;
+    #[inline]
+    fn add(self, rhs: Point) -> Point {
+        Point {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+        }
+    }
+}
+impl std::ops::Sub<Point> for Point {
+    type Output = Point;
+    #[inline]
+    fn sub(self, rhs: Point) -> Point {
+        Point {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+        }
+    }
+}
+impl std::ops::AddAssign<Point> for Point {
+    #[inline]
+    fn add_assign(&mut self, rhs: Point) {
+        self.x += rhs.x;
+        self.x += rhs.x;
+    }
+}
+impl std::ops::SubAssign<Point> for Point {
+    #[inline]
+    fn sub_assign(&mut self, rhs: Point) {
+        self.x -= rhs.x;
+        self.x -= rhs.x;
+    }
+}
+impl std::ops::Mul<i32> for Point {
+    type Output = Point;
+    #[inline]
+    fn mul(self, rhs: i32) -> Point {
+        Point {
+             x: self.x * rhs,
+             y: self.y * rhs,
+        }
     }
 }
 
