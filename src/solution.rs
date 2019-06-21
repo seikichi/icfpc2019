@@ -63,6 +63,5 @@ fn solution_to_string_test() {
         Action::AttachDrill,
     ]);
     let s = sol.to_string();
-    println!("{}", s);
     assert!(s == "WSADZEQB(1,2)FL".to_string());
 }

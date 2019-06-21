@@ -4,13 +4,13 @@ use std::io::Read;
 use std::path::Path;
 
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Point {
     pub x: i32,
     pub y: i32,
 }
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord)]
 pub enum BoosterCode {
     ExtensionOfTheManipulator,
     FastWheels,
@@ -94,6 +94,15 @@ impl BoosterCode {
             _ => panic!("failed to parse BoosterCode"),
         }
     }
+
+    pub fn symbol(self) -> &'static str {
+        match self {
+            BoosterCode::ExtensionOfTheManipulator => "B",
+            BoosterCode::FastWheels => "F",
+            BoosterCode::Drill => "L",
+            BoosterCode::MysteriousPoint => "X",
+        }
+    }
 }
 
 impl BoosterLocation {
@@ -119,6 +128,61 @@ impl Point {
     pub fn new(x: i32, y: i32) -> Self {
         Self { x, y }
     }
+
+    pub fn rotate(self, cw_rotation_count: i32) -> Self {
+        let cw_rotation_count = (cw_rotation_count + (1 << 20)) % 4;
+        return match cw_rotation_count {
+            0 => self,
+            1 => Point::new(self.y, -self.x),
+            2 => Point::new(-self.x, -self.y),
+            3 => Point::new(-self.y, self.x),
+            _ => panic!("unknown value"),
+        };
+    }
+}
+impl std::ops::Add<Point> for Point {
+    type Output = Point;
+    #[inline]
+    fn add(self, rhs: Point) -> Point {
+        Point {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+        }
+    }
+}
+impl std::ops::Sub<Point> for Point {
+    type Output = Point;
+    #[inline]
+    fn sub(self, rhs: Point) -> Point {
+        Point {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+        }
+    }
+}
+impl std::ops::AddAssign<Point> for Point {
+    #[inline]
+    fn add_assign(&mut self, rhs: Point) {
+        self.x += rhs.x;
+        self.y += rhs.y;
+    }
+}
+impl std::ops::SubAssign<Point> for Point {
+    #[inline]
+    fn sub_assign(&mut self, rhs: Point) {
+        self.x -= rhs.x;
+        self.y -= rhs.y;
+    }
+}
+impl std::ops::Mul<i32> for Point {
+    type Output = Point;
+    #[inline]
+    fn mul(self, rhs: i32) -> Point {
+        Point {
+            x: self.x * rhs,
+            y: self.y * rhs,
+        }
+    }
 }
 
 #[test]
@@ -126,4 +190,32 @@ fn test_task_from() {
     let s = "(0,0),(10,0),(10,10),(0,10)#(0,0)#(4,2),(6,2),(6,7),(4,7);(5,8),(6,8),(6,9),(5,9)#B(0,1);B(1,1);F(0,2);F(1,2);L(0,3);X(0,9)";
     let task = Task::from(s);
     // TODO
+}
+
+#[test]
+fn test_point_rotate() {
+    let p1 = Point::new(10, 1);
+    assert!(p1.rotate(0) == Point::new(10, 1));
+    assert!(p1.rotate(1) == Point::new(1, -10));
+    assert!(p1.rotate(2) == Point::new(-10, -1));
+    assert!(p1.rotate(3) == Point::new(-1, 10));
+
+    assert!(p1.rotate(-12) == Point::new(10, 1));
+}
+
+#[test]
+fn test_point_ops() {
+    let p1 = Point::new(10, 20);
+    let p2 = Point::new(1, 2);
+    assert!(p1 + p2 == Point::new(11, 22));
+    assert!(p1 - p2 == Point::new(9, 18));
+    assert!(p1 * 2 == Point::new(20, 40));
+
+    let mut p1 = Point::new(10, 20);
+    p1 += p2;
+    assert!(p1 == Point::new(11, 22));
+
+    let mut p1 = Point::new(10, 20);
+    p1 -= p2;
+    assert!(p1 == Point::new(9, 18));
 }
