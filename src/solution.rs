@@ -11,4 +11,4 @@ pub enum Action {
     AttachDrill,
 }
 
-pub struct Solution(Vec<Action>);
+pub struct Solution(pub Vec<Action>);
