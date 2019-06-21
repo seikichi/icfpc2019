@@ -69,15 +69,15 @@ fn draw_boosters(task: &Task) {
 fn visualize(s: &str) {
     let task = Task::from(s);
 
-    let screen_width = 500;
-    let screen_height = 500;
+    let bounds = get_bounds(&task);
+
     let dot_per_unit = 8;
+    let screen_width = (bounds.right - bounds.left + 1) * dot_per_unit;
+    let screen_height = (bounds.top - bounds.bottom + 1) * dot_per_unit;
 
     println!(r#"<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {} {}">"#, screen_width, screen_height);
 
-    let bounds = get_bounds(&task);
     set_canvas(dot_per_unit, &bounds);
-
     draw_bounding_rect(&bounds);
     draw_obstacles(&task);
     draw_boosters(&task);

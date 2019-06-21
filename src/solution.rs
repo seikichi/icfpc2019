@@ -1,7 +1,9 @@
 use std::fs;
-// use std::io::Read;
+use std::io::Read;
 use std::io::Write;
 use std::path::Path;
+
+use crate::task::Point;
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
 pub enum Action {
@@ -21,6 +23,42 @@ pub enum Action {
 pub struct Solution(pub Vec<Action>);
 
 impl Solution {
+    pub fn from(s: &str) -> Self {
+        let s = s.chars().collect::<Vec<char>>();
+
+        let mut actions = vec![];
+        let mut pos = 0;
+        while pos < s.len() {
+            let action = match s[pos] {
+                'W' => Action::MoveUp,
+                'S' => Action::MoveDown,
+                'A' => Action::MoveLeft,
+                'D' => Action::MoveRight,
+                'Z' => Action::DoNothing,
+                'E' => Action::TurnCW,
+                'Q' => Action::TurnCCW,
+                'B' => {
+                    pos += 1;
+                    let mut end = pos;
+                    while s[end] != ')' {
+                        end += 1;
+                    }
+                    let p = s[pos..end + 1].iter().collect::<String>();
+                    let p = Point::from(&p);
+                    pos = end;
+                    Action::AttachManipulator { dx: p.x, dy: p.y }
+                }
+                'F' => Action::AttachFastWheels,
+                'L' => Action::AttachDrill,
+                _ => panic!("wrong character"),
+            };
+            pos += 1;
+            actions.push(action);
+        }
+
+        return Solution(actions);
+    }
+
     pub fn to_string(&self) -> String {
         let Solution(actions) = self;
         let mut ret = "".to_string();
@@ -40,6 +78,13 @@ impl Solution {
             ret.push_str(&s);
         }
         return ret;
+    }
+    pub fn load(path: &Path) -> Solution{
+        let mut f = fs::File::open(path).unwrap();
+        let mut s = "".to_string();
+        f.read_to_string(&mut s).unwrap();
+        let ret = Solution::from(&s);
+        ret
     }
     pub fn save(&self, path: &Path) {
         let s = self.to_string();
@@ -64,4 +109,6 @@ fn solution_to_string_test() {
     ]);
     let s = sol.to_string();
     assert!(s == "WSADZEQB(1,2)FL".to_string());
+    let sol2 = Solution::from(&s);
+    assert!(sol == sol2);
 }
