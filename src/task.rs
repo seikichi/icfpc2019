@@ -4,7 +4,7 @@ pub struct Point {
     pub y: i32,
 }
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord)]
 pub enum BoosterCode {
     ExtensionOfTheManipulator,
     FastWheels,
@@ -27,7 +27,7 @@ pub struct Task {
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
-pub struct Map(Vec<Point>);
+pub struct Map(pub Vec<Point>);
 
 impl Map {
     pub fn from(s: &str) -> Self {
@@ -78,6 +78,15 @@ impl BoosterCode {
             "L" => BoosterCode::Drill,
             "X" => BoosterCode::MysteriousPoint,
             _ => panic!("failed to parse BoosterCode"),
+        }
+    }
+
+    pub fn symbol(self) -> &'static str {
+        match self {
+            BoosterCode::ExtensionOfTheManipulator => "B",
+            BoosterCode::FastWheels => "F",
+            BoosterCode::Drill => "L",
+            BoosterCode::MysteriousPoint => "X",
         }
     }
 }
