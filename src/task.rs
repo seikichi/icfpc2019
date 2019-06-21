@@ -1,3 +1,9 @@
+use std::fs;
+use std::io::Read;
+// use std::io::Write;
+use std::path::Path;
+
+
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Point {
     pub x: i32,
@@ -68,6 +74,15 @@ impl Task {
             boosters,
         }
     }
+    pub fn load(path: &Path) -> Self {
+        let mut f = fs::File::open(path).unwrap();
+        let mut buffer = vec![];
+        f.read_to_end(&mut buffer).unwrap();
+        let s = String::from_utf8_lossy(&buffer);
+        let ret = Task::from(&s);
+        ret
+    }
+
 }
 
 impl BoosterCode {
