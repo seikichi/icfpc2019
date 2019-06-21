@@ -5,3 +5,15 @@ authors = ["Seiichi KONDO <seikichi@kmc.gr.jp>"]
 edition = "2018"
 
 [dependencies]
+
+[lib]
+name = "lib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "main"
+path = "src/main.rs"
+
+[[bin]]
+name = "visualize"
+path = "src/visualize.rs"
