@@ -23,6 +23,42 @@ impl Field {
         let x = map.iter().map(|p| p.x).max().unwrap() as usize;
         let y = map.iter().map(|p| p.y).max().unwrap() as usize;
         let mut field = vec![vec![Square::Surface; x]; y];
+
+        for b in &task.boosters {
+            let y = b.point.y as usize;
+            let x = b.point.x as usize;
+            field[y][x] = Square::Booster {
+                code: b.code.clone(),
+            };
+        }
+
+        // TODO: fill obstacles inside ...
+        for Map(points) in &task.obstacles {
+            let mut prev = &points[0];
+            for p in points {
+                if p.x > prev.x {
+                    for x in prev.x..p.x {
+                        field[p.y as usize][x as usize] = Square::Obstacle;
+                    }
+                }
+                if p.y > prev.y {
+                    for y in prev.y..p.y {
+                        field[y as usize][(p.x - 1) as usize] = Square::Obstacle;
+                    }
+                }
+                if p.x < prev.x {
+                    for x in p.x..prev.x {
+                        field[(p.y - 1) as usize][x as usize] = Square::Obstacle;
+                    }
+                }
+                if p.y < prev.y {
+                    for y in p.y..prev.y {
+                        field[y as usize][p.x as usize] = Square::Obstacle;
+                    }
+                }
+                prev = p;
+            }
+        }
         Field(field)
     }
 }
@@ -46,76 +82,58 @@ impl DfsWrapper {
 
 #[test]
 fn test_field_from() {
-    //     let map = Map(vec![
-    //         Point::new(0, 0),
-    //         Point::new(5, 0),
-    //         Point::new(5, 4),
-    //         Point::new(0, 4),
-    //     ]);
-    //     let obstacles = vec![
-    //         Map(vec![
-    //             Point::new(0, 2),
-    //             Point::new(1, 2),
-    //             Point::new(1, 4),
-    //             Point::new(0, 4),
-    //         ]),
-    //         Map(vec![
-    //             Point::new(2, 0),
-    //             Point::new(4, 0),
-    //             Point::new(4, 1),
-    //             Point::new(3, 1),
-    //             Point::new(3, 2),
-    //             Point::new(4, 2),
-    //             Point::new(4, 3),
-    //             Point::new(2, 3),
-    //         ]),
-    //     ];
-    //     let boosters = vec![
-    //         BoosterLocation::new(BoosterCode::FastWheels, Point::new(1, 1)),
-    //         BoosterLocation::new(BoosterCode::MysteriousPoint, Point::new(3, 1)),
-    //     ];
-    //     let point = Point::new(0, 0);
-    //     let task = Task {
-    //         point,
-    //         map,
-    //         obstacles,
-    //         boosters,
-    //     };
+    // .X..
+    // .**.
+    // .F..
 
-    //     let field = Field::from(&task);
-    //     let expected = Field(vec![
-    //         vec![
-    //             Square::Surface,
-    //             Square::Surface,
-    //             Square::Obstacle,
-    //             Square::Obstacle,
-    //             Square::Surface,
-    //         ],
-    //         vec![
-    //             Square::Surface,
-    //             Square::Booster {
-    //                 code: BoosterCode::FastWheels,
-    //             },
-    //             Square::Obstacle,
-    //             Square::Booster {
-    //                 code: BoosterCode::MysteriousPoint,
-    //             },
-    //             Square::Surface,
-    //         ],
-    //         vec![
-    //             Square::Obstacle,
-    //             Square::Surface,
-    //             Square::Obstacle,
-    //             Square::Obstacle,
-    //             Square::Surface,
-    //         ],
-    //         vec![
-    //             Square::Obstacle,
-    //             Square::Surface,
-    //             Square::Surface,
-    //             Square::Surface,
-    //             Square::Surface,
-    //         ],
-    //     ]);
-    //     assert_eq!(field, expected);
+    let map = Map(vec![
+        Point::new(0, 0),
+        Point::new(4, 0),
+        Point::new(4, 3),
+        Point::new(0, 3),
+    ]);
+    let obstacles = vec![Map(vec![
+        Point::new(1, 1),
+        Point::new(3, 1),
+        Point::new(3, 2),
+        Point::new(1, 2),
+    ])];
+    let boosters = vec![
+        BoosterLocation::new(BoosterCode::FastWheels, Point::new(1, 0)),
+        BoosterLocation::new(BoosterCode::MysteriousPoint, Point::new(1, 2)),
+    ];
+    let point = Point::new(0, 0);
+    let task = Task {
+        point,
+        map,
+        obstacles,
+        boosters,
+    };
+
+    let field = Field::from(&task);
+    let expected = Field(vec![
+        vec![
+            Square::Surface,
+            Square::Booster {
+                code: BoosterCode::FastWheels,
+            },
+            Square::Surface,
+            Square::Surface,
+        ],
+        vec![
+            Square::Surface,
+            Square::Obstacle,
+            Square::Obstacle,
+            Square::Surface,
+        ],
+        vec![
+            Square::Surface,
+            Square::Booster {
+                code: BoosterCode::MysteriousPoint,
+            },
+            Square::Surface,
+            Square::Surface,
+        ],
+    ]);
+    assert_eq!(field, expected);
 }
