@@ -33,7 +33,7 @@ impl Solution {
                 Action::DoNothing => "Z".to_string(),
                 Action::TurnCW => "E".to_string(),
                 Action::TurnCCW => "Q".to_string(),
-                Action::AttachManipulator { dx, dy } => format!("B({},{}))", dx, dy),
+                Action::AttachManipulator { dx, dy } => format!("B({},{})", dx, dy),
                 Action::AttachFastWheels => "F".to_string(),
                 Action::AttachDrill => "L".to_string(),
             };
@@ -46,4 +46,23 @@ impl Solution {
         let mut buffer = fs::File::create(path).unwrap();
         buffer.write_fmt(format_args!("{}", s)).unwrap();
     }
+}
+
+#[test]
+fn solution_to_string_test() {
+    let sol = Solution(vec![
+        Action::MoveUp,
+        Action::MoveDown,
+        Action::MoveLeft,
+        Action::MoveRight,
+        Action::DoNothing,
+        Action::TurnCW,
+        Action::TurnCCW,
+        Action::AttachManipulator { dx: 1, dy: 2 },
+        Action::AttachFastWheels,
+        Action::AttachDrill,
+    ]);
+    let s = sol.to_string();
+    println!("{}", s);
+    assert!(s == "WSADZEQB(1,2)FL".to_string());
 }
