@@ -99,6 +99,21 @@ impl Point {
     }
 }
 
+enum Action {
+    MoveUp,
+    MoveDown,
+    MoveLeft,
+    MoveRight,
+    DoNothing,
+    TurnCW,
+    TurnCCW,
+    AttachManipulator { dx: i32, dy: i32 },
+    AttachFastWheels,
+    AttachDrill,
+}
+
+struct Solution(Vec<Action>);
+
 fn main() {
     println!("Hello, world!");
 }
