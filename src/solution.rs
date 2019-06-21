@@ -1,3 +1,8 @@
+use std::fs;
+// use std::io::Read;
+use std::io::Write;
+use std::path::Path;
+
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
 pub enum Action {
     MoveUp,
@@ -16,7 +21,7 @@ pub enum Action {
 pub struct Solution(pub Vec<Action>);
 
 impl Solution {
-    fn to_string(&self) -> String {
+    pub fn to_string(&self) -> String {
         let Solution(actions) = self;
         let mut ret = "".to_string();
         for action in actions.iter() {
@@ -35,5 +40,10 @@ impl Solution {
             ret.push_str(&s);
         }
         return ret;
+    }
+    pub fn save(&self, path: &Path) {
+        let s = self.to_string();
+        let mut buffer = fs::File::create(path).unwrap();
+        buffer.write_fmt(format_args!("{}", s)).unwrap();
     }
 }

@@ -76,9 +76,8 @@ impl Task {
     }
     pub fn load(path: &Path) -> Self {
         let mut f = fs::File::open(path).unwrap();
-        let mut buffer = vec![];
-        f.read_to_end(&mut buffer).unwrap();
-        let s = String::from_utf8_lossy(&buffer);
+        let mut s;
+        f.read_to_string(&mut s).unwrap();
         let ret = Task::from(&s);
         ret
     }
