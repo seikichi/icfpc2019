@@ -126,7 +126,7 @@ impl DfsWrapper {
                     }
 
                     actions.reverse();
-                    return Some(Solution(actions));
+                    return Some(Solution(vec![actions]));
                 }
                 _ => {}
             }
