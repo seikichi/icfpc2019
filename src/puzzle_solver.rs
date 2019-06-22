@@ -73,7 +73,7 @@ impl PuzzleSolver {
                         if field[side.y as usize][x] == Square::Surface {
                             panic!("Failed to fix obstacle intersect");
                         }
-                        field[side.y as usize][x] = Square::Obstacle;
+                        field[corner.y as usize][x] = Square::Obstacle;
                     }
                 }
             }
