@@ -17,6 +17,8 @@
   },
   "homepage": "https://github.com/seikichi/icfpc2019#readme",
   "dependencies": {
-    "puppeteer": "^1.18.0"
+    "aws-sdk": "^2.480.0",
+    "puppeteer": "^1.18.0",
+    "tmp": "^0.1.0"
   }
 }
