@@ -6,6 +6,9 @@ use crate::wrapper::Wrapper;
 pub struct DfsWrapper {}
 
 impl Wrapper for DfsWrapper {
+    fn new(task: &Task) -> Self {
+        DfsWrapper {}
+    }
     fn wrap(&mut self, task: &Task) -> Solution {
         let mut solution = vec![];
         let mut field = Field::from(task);
