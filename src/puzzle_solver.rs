@@ -13,8 +13,6 @@ pub struct PuzzleSolver {
 
 impl PuzzleSolver {
     pub fn new(puzzle: &Puzzle) -> Self {
-        let max_x = puzzle.max_x() as usize;
-        let max_y = puzzle.max_y() as usize;
         let mut field = Field {
             field: vec![vec![Square::Unknown; puzzle.xy_max()]; puzzle.xy_max()],
             booster_field: vec![vec![Square::Unknown; puzzle.xy_max()]; puzzle.xy_max()],
@@ -27,20 +25,6 @@ impl PuzzleSolver {
         for &p in puzzle.i_seq.iter() {
             field[p.y as usize][p.x as usize] = Square::Surface;
         }
-        for &p in puzzle.o_seq.iter() {
-            for dy in -1..2 {
-                for dx in -1..2 {
-                    let ny = p.y + dy;
-                    let nx = p.x + dx;
-                    if !field.in_map(Point::new(ny, nx))
-                        || field[ny as usize][nx as usize] == Square::Obstacle
-                    {
-                        continue;
-                    }
-                    field[ny as usize][nx as usize] = Square::Surface;
-                }
-            }
-        }
         'outer_loop: for y in (0..field.height()).rev() {
             for x in (0..field.width()).rev() {
                 if field[y][x] == Square::Obstacle {
@@ -51,35 +35,49 @@ impl PuzzleSolver {
             }
         }
 
-        // *.. => **.
-        // .*.    .*.
-        for y in 0..field.height() {
-            for x in 0..field.width() {
-                if field[y][x] != Square::Obstacle {
-                    continue;
-                }
-                let dx = [-1, 1];
-                let dy = [1, 1];
-                for d in 0..2 {
-                    let corner = Point::new((x as i32) + dx[d], (y as i32) + dy[d]);
-                    let side = Point::new((x as i32) + dx[d], (y as i32));
+        // for &p in puzzle.o_seq.iter() {
+        //     for dy in -1..2 {
+        //         for dx in -1..2 {
+        //             let ny = p.y + dy;
+        //             let nx = p.x + dx;
+        //             if !field.in_map(Point::new(ny, nx))
+        //                 || field[ny as usize][nx as usize] == Square::Obstacle
+        //             {
+        //                 continue;
+        //             }
+        //             field[ny as usize][nx as usize] = Square::Surface;
+        //         }
+        //     }
+        // }
 
-                    if !field.in_map(corner) {
-                        continue;
-                    }
-                    if field[corner.y as usize][corner.x as usize] == Square::Obstacle
-                        && field[side.y as usize][side.x as usize] != Square::Obstacle
-                    {
-                        if field[side.y as usize][x] == Square::Surface {
-                            panic!("Failed to fix obstacle intersect");
-                        }
-                        field[corner.y as usize][x] = Square::Obstacle;
-                    }
-                }
-            }
-        }
+        // // *.. => **.
+        // // .*.    .*.
+        // for y in 0..field.height() {
+        //     for x in 0..field.width() {
+        //         if field[y][x] != Square::Obstacle {
+        //             continue;
+        //         }
+        //         let dx = [-1, 1];
+        //         let dy = [1, 1];
+        //         for d in 0..2 {
+        //             let corner = Point::new((x as i32) + dx[d], (y as i32) + dy[d]);
+        //             let side = Point::new((x as i32) + dx[d], (y as i32));
 
-        // let current = vec![vec![Square::Unknown; field.width()]; field.height()];
+        //             if !field.in_map(corner) {
+        //                 continue;
+        //             }
+        //             if field[corner.y as usize][corner.x as usize] == Square::Obstacle
+        //                 && field[side.y as usize][side.x as usize] != Square::Obstacle
+        //             {
+        //                 if field[side.y as usize][x] == Square::Surface {
+        //                     panic!("Failed to fix obstacle intersect");
+        //                 }
+        //                 field[corner.y as usize][x] = Square::Obstacle;
+        //             }
+        //         }
+        //     }
+        // }
+
         PuzzleSolver {
             puzzle: puzzle.clone(),
             field: field,
@@ -89,33 +87,46 @@ impl PuzzleSolver {
     }
 
     pub fn solve(&mut self) {
-        let start_pos = self.puzzle.i_seq[0];
-        self.field[start_pos.y as usize][start_pos.x as usize] = Square::WrappedSurface;
         let mut rng = rand::thread_rng();
         loop {
+            let initial_field = self.field.clone();
+            let r = rng.gen::<usize>() % self.puzzle.i_seq.len();
+            let start_pos = self.puzzle.i_seq[r];
+            let mut candidate_poss = vec![start_pos];
+            self.field[start_pos.y as usize][start_pos.x as usize] = Square::WrappedSurface;
             loop {
-                let mut worker = Worker::new(start_pos);
-                worker.manipulators = vec![];
-                if let Some((_end_pos, actions)) = self.field.bfs(&worker, Square::Surface, &vec![])
-                {
-                    for &action in actions.iter() {
-                        worker.act(action, &mut self.field, &mut vec![0; 10]);
+                loop {
+                    let r = rng.gen::<usize>() % candidate_poss.len();
+                    let pos = candidate_poss[r];
+                    let mut worker = Worker::new(pos);
+                    worker.manipulators = vec![];
+                    if let Some((_end_pos, actions)) = self.field.dijkstra(&worker, Square::Surface)
+                    {
+                        for &action in actions.iter() {
+                            worker.act(action, &mut self.field, &mut vec![0; 10]);
+                            candidate_poss.push(worker.p);
+                        }
+                    } else {
+                        break;
                     }
-                } else {
+                }
+                break;
+                // TODO
+                let need_area = self.puzzle.area_min() as i32 - self.count_area() as i32;
+                if need_area <= 0 {
                     break;
                 }
-            }
-            let need_area = self.puzzle.area_min() as i32 - self.count_area() as i32;
-            if need_area <= 0 {
-                break;
-            }
-            for i in 0..5 {
-                let y = rng.gen::<usize>() % self.field.height();
-                let x = rng.gen::<usize>() % self.field.width();
-                if self.field[y][x] == Square::Unknown {
-                    self.field[y][x] = Square::Surface;
+                loop {
+                    let y = rng.gen::<usize>() % self.field.height();
+                    let x = rng.gen::<usize>() % self.field.width();
+                    if self.field[y][x] == Square::Unknown {
+                        self.field[y][x] = Square::Surface;
+                        break;
+                    }
                 }
             }
+            break;
+            // x
         }
         // let initial_field = self.field.clone();
         loop {

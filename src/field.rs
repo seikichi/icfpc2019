@@ -295,6 +295,81 @@ impl Field {
         None
     }
 
+    pub fn dijkstra(&self, worker: &Worker, target: Square) -> Option<(Point, Vec<Action>)> {
+        let w = self.width();
+        let h = self.height();
+
+        let mut queue = std::collections::BinaryHeap::new();
+        queue.push((0, worker.p));
+
+        let mut visited = vec![vec![false; w]; h];
+        let mut costs = vec![vec![1 << 30; w]; h];
+        let mut parents = vec![vec![Point::new(0, 0); w]; h];
+
+        while let Some((cost, p)) = queue.pop() {
+            let cost = -cost;
+            let y = p.y as usize;
+            let x = p.x as usize;
+            if visited[y][x] {
+                continue;
+            }
+            visited[y][x] = true ;
+            if self[y][x] == target || self.booster_field[y][x] == target {
+                let end_p = Point::new(x as i32, y as i32);
+                let mut actions = vec![];
+                let mut p = p;
+                while p != worker.p {
+                    let ppos = parents[p.y as usize][p.x as usize];
+                    let ns = [
+                        (p.y - 1, p.x, Action::MoveUp),
+                        (p.y + 1, p.x, Action::MoveDown),
+                        (p.y, p.x - 1, Action::MoveRight),
+                        (p.y, p.x + 1, Action::MoveLeft),
+                    ];
+                    for &(ny, nx, a) in &ns {
+                        if ppos.y != ny || ppos.x != nx {
+                            continue;
+                        }
+                            actions.push(a);
+                            p = ppos;
+                            break;
+                    }
+                }
+
+                actions.reverse();
+                if actions.is_empty() {
+                    actions.push(Action::DoNothing);
+                }
+                return Some((end_p, actions));
+            }
+
+            let ns = [
+                (p.y + 1, p.x),
+                (p.y - 1, p.x),
+                (p.y, p.x + 1),
+                (p.y, p.x - 1),
+            ];
+            for &(ny, nx) in &ns {
+                let np = Point::new(nx, ny);
+                if !self.movable(np) {
+                    continue;
+                }
+                let ncost = if self[ny as usize][nx as usize] == Square::WrappedSurface {
+                    cost
+                } else {
+                    cost + 1
+                };
+                if visited[ny as usize][nx as usize] || ncost >= costs[ny as usize][nx as usize]{
+                    continue;
+                }
+                costs[ny as usize][nx as usize] = ncost;
+                parents[ny as usize][nx as usize] = p;
+                queue.push((-ncost, np));
+            }
+        }
+        None
+    }
+
 
     pub fn from(task: &Task) -> Self {
         let Map(map) = &task.map;
