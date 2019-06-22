@@ -94,7 +94,6 @@ impl PuzzleSolver {
             let start_pos = self.puzzle.i_seq[r];
             let mut candidate_poss = vec![start_pos];
             self.field[start_pos.y as usize][start_pos.x as usize] = Square::WrappedSurface;
-            // loop {
             loop {
                 let r = rng.gen::<usize>() % candidate_poss.len();
                 let pos = candidate_poss[r];
@@ -109,33 +108,28 @@ impl PuzzleSolver {
                     break;
                 }
             }
-            // break;
-            // let need_area = self.puzzle.area_min() as i32 - self.count_area() as i32;
-            // if need_area <= 0 {
-            //     break;
-            // }
-            // for _i in 0..10 {
-            //     let y = rng.gen::<usize>() % self.field.height();
-            //     let x = rng.gen::<usize>() % self.field.width();
-            //     if self.field[y][x] == Square::Unknown {
-            //         self.field[y][x] = Square::Surface;
-            //     }
-            // }
-            // }
             self.fill_random_area();
-
+            // check self intersection & visitable all obstacle
+            // self.field.print(0, 0, 150, 150);
+            // self.field.print(0, 0, 150, 150);
+            println!(
+                "inteseciton: {}\n invalid: {}",
+                self.self_intersection(),
+                self.contains_invalid_obstacle()
+            );
+            if self.self_intersection() || self.contains_invalid_obstacle() {
+                // retry
+                self.field = initial_field;
+                continue;
+            }
             break;
-            // TODO check visitable all obstacle
-
-            // x
         }
-        // let initial_field = self.field.clone();
+
         loop {
             let need_vertex = self.puzzle.v_min as i32 - self.count_vertex() as i32;
             if need_vertex <= 0 {
                 break;
             }
-            let mut first = true;
             let mut pos = self.get_left_bottom_position();
             let mut vertexs = vec![pos];
             let mut dir = 0;
@@ -146,7 +140,7 @@ impl PuzzleSolver {
                 }
                 let move_cnt = rng.gen::<usize>() % 30 + 3;
                 for _iter2 in 0..move_cnt {
-                    first = true;
+                    let mut first = true;
                     self.one_move(
                         &mut pos,
                         &mut dir,
@@ -167,9 +161,8 @@ impl PuzzleSolver {
                 pos = npos;
                 cnt -= 1;
             }
-            // self.field.print(0, 0, 150, 150);
         }
-        let mut first = true;
+
         let mut rest_boosters = vec![];
         for i in 0..self.puzzle.booster_num.len() {
             let booster = match i {
@@ -185,6 +178,7 @@ impl PuzzleSolver {
                 rest_boosters.push(booster);
             }
         }
+        let mut first = true;
         for y in 0..self.field.height() {
             for x in 0..self.field.width() {
                 if self.field[y][x] == Square::WrappedSurface {
@@ -277,11 +271,35 @@ impl PuzzleSolver {
         return true;
     }
 
+    pub fn self_intersection(&self) -> bool {
+        for y in 0..self.field.height() as i32 {
+            for x in 0..self.field.width() as i32 {
+                if self.field[y as usize][x as usize] != Square::WrappedSurface {
+                    continue;
+                }
+                let dx = [1, 1, -1, -1];
+                let dy = [1, -1, -1, 1];
+                for i in 0..4 {
+                    let nx = x + dx[i];
+                    let ny = y + dy[i];
+                    if self.field.in_map(Point::new(nx, ny))
+                        && self.field[ny as usize][nx as usize] == Square::WrappedSurface
+                        && self.field[y as usize][nx as usize] != Square::WrappedSurface
+                        && self.field[ny as usize][x as usize] != Square::WrappedSurface
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
     pub fn fill_random_area(&mut self) {
         let mut rng = rand::thread_rng();
         let mut need_area = self.puzzle.area_min() as i32 - self.count_area() as i32;
         'outer_loop: while need_area > 0 {
-            let s = rng.gen::<usize>() % 8 + 8;
+            let s = rng.gen::<usize>() % 8 + 2;
             let sx = rng.gen::<usize>() % (self.field.width() - s);
             let sy = rng.gen::<usize>() % (self.field.height() - s);
             let mut cnt = 0;
@@ -294,7 +312,9 @@ impl PuzzleSolver {
                     }
                 }
             }
-            if cnt == 0 { continue; }
+            if cnt == 0 {
+                continue;
+            }
             for y in sy..sy + s {
                 for x in sx..sx + s {
                     self.field[y][x] = Square::WrappedSurface;
