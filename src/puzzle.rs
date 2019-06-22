@@ -1,7 +1,7 @@
-use std::fs;
-use std::io::Read;
-// use std::io::Write;
-use std::path::Path;
+// use std::fs;
+// use std::io::Read;
+// // use std::io::Write;
+// use std::path::Path;
 
 use crate::task::*;
 
@@ -46,6 +46,24 @@ impl Puzzle {
             i_seq,
             o_seq,
         }
+    }
+    pub fn area_min(&self) -> usize {
+        self.t_size - self.t_size / 10
+    }
+    pub fn area_max(&self) -> usize {
+        self.t_size * self.t_size / 5
+    }
+    pub fn max_x(&self) -> i32 {
+        std::cmp::max(
+            self.i_seq.iter().cloned().map(|p| p.x).max().unwrap(),
+            self.o_seq.iter().cloned().map(|p| p.x).max().unwrap(),
+        )
+    }
+    pub fn max_y(&self) -> i32 {
+        std::cmp::max(
+            self.i_seq.iter().cloned().map(|p| p.y).max().unwrap(),
+            self.o_seq.iter().cloned().map(|p| p.y).max().unwrap(),
+        )
     }
 }
 
