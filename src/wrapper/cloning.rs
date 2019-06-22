@@ -61,6 +61,8 @@ impl Wrapper for CloningWrapper {
     }
     fn wrap(&mut self, _task: &Task) -> Solution {
         let mut solution = vec![vec![]];
+        solution[0].push(Action::TurnCCW);
+        self.workers[0].act(Action::TurnCCW, &mut self.field, &mut self.booster_cnts);
         while !self.field.is_finished() {
             for i in 0..self.workers.len() {
                 self.one_worker_action(i, &mut solution);
@@ -231,10 +233,10 @@ impl CloningWrapper {
             }
 
             let ns = [
+                (p.y + 1, p.x),
+                (p.y - 1, p.x),
                 (p.y, p.x + 1),
                 (p.y, p.x - 1),
-                (p.y - 1, p.x),
-                (p.y + 1, p.x),
             ];
             for &(ny, nx) in &ns {
                 let np = Point::new(nx, ny);
