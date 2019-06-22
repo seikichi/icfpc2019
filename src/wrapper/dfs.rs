@@ -22,6 +22,35 @@ impl Field {
         let y = map.iter().map(|p| p.y).max().unwrap() as usize;
         let mut field = vec![vec![Square::Surface; x]; y];
 
+        {
+            let mut prev = &map[0];
+            let mut ps = map.clone();
+            ps.push(map[0].clone());
+            for p in &ps {
+                if p.x > prev.x && p.y > 0 {
+                    for x in prev.x..p.x {
+                        field[(p.y - 1) as usize][x as usize] = Square::Obstacle;
+                    }
+                }
+                if p.y > prev.y && p.x < x as i32 {
+                    for y in prev.y..p.y {
+                        field[y as usize][p.x as usize] = Square::Obstacle;
+                    }
+                }
+                if p.x < prev.x && p.y < y as i32 {
+                    for x in p.x..prev.x {
+                        field[p.y as usize][x as usize] = Square::Obstacle;
+                    }
+                }
+                if p.y < prev.y && p.x > 0 {
+                    for y in p.y..prev.y {
+                        field[y as usize][(p.x - 1) as usize] = Square::Obstacle;
+                    }
+                }
+                prev = p;
+            }
+        }
+
         for b in &task.boosters {
             let y = b.point.y as usize;
             let x = b.point.x as usize;
