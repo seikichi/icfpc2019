@@ -2,12 +2,12 @@ const utils = require('./utils');
 
 (async () => {
   if (process.argv.length !== 4) {
-    console.error("node checker.js task.desc solution.sol");
+    console.error("node checker.js puzzle.cond task.dec");
     process.exit(-1);
   }
-  const taskPath = process.argv[2];
-  const solutionPath = process.argv[3];
-  const result = await utils.check(taskPath, solutionPath);
+  const puzzlePath = process.argv[2];
+  const taskPath = process.argv[3];
+  const result = await utils.checkPuzzle(puzzlePath, taskPath);
   console.log(JSON.stringify(result));
 
   if (!result.success) {

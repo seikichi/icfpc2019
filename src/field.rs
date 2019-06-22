@@ -111,13 +111,31 @@ impl Worker {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord)]
 pub enum Square {
     Surface,
     WrappedSurface,
     Obstacle,
     Booster { code: BoosterCode },
     Unknown,
+}
+impl Square {
+    pub fn get_char(&self) -> char {
+        match self {
+            Square::Surface => '*',
+            Square::WrappedSurface => '@',
+            Square::Obstacle => '#',
+            Square::Booster { code } => match code {
+                BoosterCode::ExtensionOfTheManipulator => 'B',
+                BoosterCode::FastWheels => 'F',
+                BoosterCode::Drill => 'L',
+                BoosterCode::MysteriousPoint => 'X',
+                BoosterCode::Teleport => 'R',
+                BoosterCode::Cloning => 'C',
+            },
+            Square::Unknown => '.',
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
@@ -175,6 +193,106 @@ impl Field {
     }
     pub fn is_finished(&self) -> bool {
         self.rest_surface_cnt == 0
+    }
+    pub fn print(&self, sx: usize, sy: usize, w: usize, h: usize) {
+        for y in (sy..sy + h).rev() {
+            if y >= self.height() {
+                continue;
+            }
+            for x in sx..sx + w {
+                if x >= self.width() {
+                    break;
+                }
+                let square = if self[y][x] != Square::Unknown {
+                    self[y][x]
+                } else {
+                    self.booster_field[y][x]
+                };
+                print!("{}", square.get_char());
+            }
+            println!("");
+        }
+    }
+
+    // TODO lockをちゃんと実装する
+    // lockはそのsquareがtargetであっても無視する
+    pub fn bfs(
+        &self,
+        worker: &Worker,
+        target: Square,
+        _lock: &Vec<Point>,
+    ) -> Option<(Point, Vec<Action>)> {
+        let w = self.width();
+        let h = self.height();
+
+        let mut current = worker.p;
+        let mut queue = std::collections::VecDeque::new();
+        queue.push_back((current, 0));
+
+        let mut visited = vec![vec![-1; w]; h];
+
+        while let Some((p, cost)) = queue.pop_front() {
+            let y = p.y as usize;
+            let x = p.x as usize;
+            if visited[y][x] != -1 {
+                continue;
+            }
+            visited[y][x] = cost;
+            if self[y][x] == target || self.booster_field[y][x] == target {
+                let end_p = Point::new(x as i32, y as i32);
+                let mut actions = vec![];
+                let mut y = y as i32;
+                let mut x = x as i32;
+                current.y = y;
+                current.x = x;
+                while visited[y as usize][x as usize] != 0 {
+                    let cost = visited[y as usize][x as usize];
+
+                    let ns = [
+                        (y - 1, x, Action::MoveUp),
+                        (y + 1, x, Action::MoveDown),
+                        (y, x - 1, Action::MoveRight),
+                        (y, x + 1, Action::MoveLeft),
+                    ];
+                    for &(ny, nx, a) in &ns {
+                        if !self.in_map(Point::new(nx, ny)) {
+                            continue;
+                        }
+                        let ncost = visited[ny as usize][nx as usize];
+                        if cost == ncost + 1 {
+                            actions.push(a);
+                            y = ny;
+                            x = nx;
+                            break;
+                        }
+                    }
+                }
+
+                actions.reverse();
+                if actions.is_empty() {
+                    actions.push(Action::DoNothing);
+                }
+                return Some((end_p, actions));
+            }
+
+            let ns = [
+                (p.y + 1, p.x),
+                (p.y - 1, p.x),
+                (p.y, p.x + 1),
+                (p.y, p.x - 1),
+            ];
+            for &(ny, nx) in &ns {
+                let np = Point::new(nx, ny);
+                if !self.movable(np) {
+                    continue;
+                }
+                if visited[ny as usize][nx as usize] != -1 {
+                    continue;
+                }
+                queue.push_back((np, cost + 1));
+            }
+        }
+        None
     }
 
 

@@ -36,7 +36,25 @@ solutions/problems/prob-001.desc does not exists, upload the given solution.
 The given solution (10) seems better than old one (13), upload it ...
 ```
 
-## checker.js
+## puzzle-checker.js
+
+公式の Checker を利用して解答が正しいかどうか検証します。結果を標準出力に出力します。また失敗時はステータスコード 255 です。
+
+```sh
+> node tools/checker.js path/to/puzzle.cond path/to/task.desc
+{"success":true}
+
+> echo $?
+0
+
+> node tools/checker.js path/to/puzzle.cond path/to/task.desc
+{"success":false}
+
+> echo $?
+255
+```
+
+## solution-checker.js
 
 公式の Checker を利用して解答が正しいかどうか検証します。結果を標準出力に出力します。また失敗時はステータスコード 255 です。
 

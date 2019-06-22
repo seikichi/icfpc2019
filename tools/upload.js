@@ -11,6 +11,20 @@ async function upload(key, solutionPath) {
   return s3.putObject({ Key: key, Body: data }).promise();
 }
 
+function timeunits(solution) {
+  const actions = solution.split('#')[0];
+  return actions.match(/[A-Z]/g).length;
+}
+
+async function upload_with_check(key, taskPath, solutionPath) {
+  const current = await utils.checkSolution(taskPath, solutionPath);
+  if (!current.success) {
+    console.error(`Invalid task or solution ${key}, ${taskPath}, ${solutionPath}`);
+    process.exit(-1);
+  }
+  upload(key, solutionPath);
+}
+
 (async () => {
   if (process.argv.length !== 5) {
     console.error("node upload.js id task.desc solution.sol");
@@ -21,41 +35,27 @@ async function upload(key, solutionPath) {
   const taskPath = process.argv[3];
   const solutionPath = process.argv[4];
 
-  const current = await utils.check(taskPath, solutionPath);
-  if (!current.success) {
-    console.error(`Invalid task or solution ${problemId}, ${taskPath}, ${solutionPath}`);
-    process.exit(-1);
-  }
-
   const key = `solutions/problems/prob-${problemId}.sol`;
   try {
     await s3.headObject({ Key: key }).promise();
   } catch (error) {
     if (error.code === 'NotFound') {
-      console.log(`${key} does not exists, upload the given solution.`);
-      // upload(key, solutionPath);
+      console.log(`${key} does not exists, try to upload the given solution.`);
+      upload_with_check(key, taskPath, solutionPath);
       return;
     }
     throw error;
   }
+
   const object = await s3.getObject({ Key: key }).promise();
+  const old_timeunits = timeunits(object.Body.toString());
+  const new_timeunits = timeunits(fs.readFileSync(solutionPath, 'utf-8'));
 
-  // const tmpFile = tmp.fileSync();
-  // fs.writeFileSync(tmpFile.name, object.Body);
-  // const prev = await utils.check(taskPath, tmpFile.name);
-  // if (!prev.success) {
-  //   console.error(`ERROR: invalid solution in the S3 bucket!!! (key = ${key})`);
-  //   process.exit(-1);
-  // }
-  // const prev_timeunits = prev.timeunits;
-
-  const actions = object.Body.toString().split('#')[0];
-  const prev_timeunits = actions.match(/[A-Z]/g).length;
-
-  if (current.timeunits < prev_timeunits) {
-    console.log(`The given solution (${current.timeunits}) seems better than old one (${prev_timeunits}), upload it ... (key = ${key})`);
-    upload(key, solutionPath);
+  if (old_timeunits <= new_timeunits) {
+    console.log(`The new solution of problem ${problemId} (${new_timeunits}) does not better than old one (${old_timeunits}).`);
+    return;
   }
 
-  // tmpFile.removeCallback();
+  console.log(`The new solution of problem ${problemId} (${new_timeunits}) seems better than old one (${old_timeunits}), try to upload it.`);
+  upload_with_check(key, taskPath, solutionPath);
 })();
