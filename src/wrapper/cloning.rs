@@ -11,6 +11,7 @@ enum GoalKind {
     GetCloningBooster,
     Cloning,
     Wrap,
+    Rotate,
     _RandomMove,
     Nothing,
 }
@@ -69,7 +70,7 @@ impl Wrapper for CloningWrapper {
             }
             for w in self.next_turn_workers.iter() {
                 self.workers.push(w.clone());
-                self.worker_goals.push(WorkerGoal::nop());
+                self.worker_goals.push(WorkerGoal::new(GoalKind::Rotate, Point::new(0, 0), vec![Action::TurnCW]));
                 solution.push(vec![]);
             }
             self.next_turn_workers = vec![];
