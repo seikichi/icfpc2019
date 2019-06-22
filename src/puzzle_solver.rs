@@ -2,9 +2,14 @@
 use crate::field::*;
 use crate::puzzle::*;
 use crate::task::*;
+
+use rand::Rng;
+
 pub struct PuzzleSolver {
     puzzle: Puzzle,
     field: Field,
+    start_point: Point,
+    boosters: Vec<BoosterLocation>,
 }
 
 impl PuzzleSolver {
@@ -12,8 +17,8 @@ impl PuzzleSolver {
         let max_x = puzzle.max_x() as usize;
         let max_y = puzzle.max_y() as usize;
         let mut field = Field {
-            field: vec![vec![Square::Unknown; max_x + 50]; max_y + 50],
-            booster_field: vec![vec![Square::Unknown; max_x + 50]; max_y + 50],
+            field: vec![vec![Square::Unknown; max_x + 100]; max_y + 100],
+            booster_field: vec![vec![Square::Unknown; max_x + 100]; max_y + 100],
             rest_booster_cnts: vec![0; 10],
             rest_surface_cnt: 1 << 30,
         };
@@ -27,7 +32,8 @@ impl PuzzleSolver {
         PuzzleSolver {
             puzzle: puzzle.clone(),
             field: field,
-            // current: current,
+            start_point: Point::new(0, 0),
+            boosters: vec![],
         }
     }
 
@@ -42,64 +48,181 @@ impl PuzzleSolver {
                 worker.act(action, &mut self.field, &mut vec![0; 10]);
             }
         }
-        //
-    }
-
-    pub fn get_map(&self) -> Map {
-        let mut pos = Point::new(0, 0);
-        'yloop: for y in 0..self.field.height() {
-            for x in 0..self.field.width() {
-                if self.field[y][x] == Square::WrappedSurface {
-                    pos = Point::new(x as i32, y as i32);
-                    break 'yloop;
-                }
+        let mut rng = rand::thread_rng();
+        let initial_field = self.field.clone();
+        loop {
+            let need_vertex = self.puzzle.v_min as i32 - self.count_vertex() as i32;
+            let need_area = self.puzzle.area_min() as i32 - self.count_area() as i32;
+            if need_vertex <= 0 && need_area <= 0 {
+                break;
             }
-        }
-        let mut vertexs = vec![pos];
-        let dx = [1, 0, -1, 0];
-        let dy = [0, 1, 0, -1];
-        let mut dir = 0;
-        let mut first = true;
-        'outer_loop: loop {
-            dir = (dir + 3) % 4;
-            for d in 0..4 {
-                let npos = Point::new(pos.x + dx[dir], pos.y + dy[dir]);
-                if !first && pos == vertexs[0] && dir == 0 {
-                    break 'outer_loop;
+            let mut first = true;
+            let mut pos = self.get_left_bottom_position();
+            let mut vertexs = vec![pos];
+            let mut dir = 0;
+            let cnt = need_vertex + 20;
+            for _iter in 0..cnt {
+                let move_cnt = rng.gen::<usize>() % 10 + 3;
+                for _iter2 in 0..move_cnt {
+                    self.one_move(&mut pos, &mut dir, &mut vertexs, &mut first);
                 }
-                if !self.field.in_map(npos)
-                    || self.field[npos.y as usize][npos.x as usize] != Square::WrappedSurface
-                {
-                    if d == 1 || d == 2 {
-                        let corner = match dir {
-                            0 => pos + Point::new(1, 0),
-                            1 => pos + Point::new(1, 1),
-                            2 => pos + Point::new(0, 1),
-                            3 => pos,
-                            _ => panic!(""),
-                        };
-                        vertexs.push(corner);
-                    }
+                let dx = [1, 0, -1, 0];
+                let dy = [0, 1, 0, -1];
+                dir = (dir + 3) % 4;
+                let npos = pos + Point::new(dx[dir], dy[dir]);
+                if !self.field.movable(npos) || !self.can_set(npos, dir) {
                     dir = (dir + 1) % 4;
                     continue;
                 }
-                if d == 0 {
-                    let corner = match dir {
-                        0 => pos + Point::new(1, 0),
-                        1 => pos + Point::new(1, 1),
-                        2 => pos + Point::new(0, 1),
-                        3 => pos,
-                        _ => panic!(""),
-                    };
-                    vertexs.push(corner);
-                }
+                self.field[npos.y as usize][npos.x as usize] = Square::WrappedSurface;
                 pos = npos;
-                first = false;
+            }
+            // self.field.print(0, 0, 150, 150);
+        }
+        let mut first = true;
+        let mut rest_boosters = vec![];
+        for i in 0..self.puzzle.booster_num.len() {
+            let booster = match i {
+                0 => BoosterCode::ExtensionOfTheManipulator,
+                1 => BoosterCode::FastWheels,
+                2 => BoosterCode::Drill,
+                3 => BoosterCode::MysteriousPoint,
+                4 => BoosterCode::Teleport,
+                5 => BoosterCode::Cloning,
+                _ => panic!(""),
+            };
+            for _j in 0..self.puzzle.booster_num[i] {
+                rest_boosters.push(booster);
+            }
+        }
+        for y in 0..self.field.height() {
+            for x in 0..self.field.width() {
+                if self.field[y][x] == Square::WrappedSurface {
+                    if first {
+                        self.start_point = Point::new(x as i32, y as i32);
+                        first = false;
+                    } else {
+                        if let Some(booster) = rest_boosters.pop() {
+                            self.boosters.push(BoosterLocation{code: booster, point: Point::new(x as i32, y as i32)});
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn can_set(&self, pos: Point, dir: usize) -> bool {
+        let dx = [1, 0, -1, 0];
+        let dy = [0, 1, 0, -1];
+        let pos2 = pos + Point::new(dx[dir], dy[dir]);
+        if self.field[pos2.y as usize][pos2.x as usize] == Square::WrappedSurface {
+            return false;
+        }
+        for d1 in -1..2 {
+            if d1 == 0 {
+                continue;
+            }
+            let ndir = (dir as i32 + 4 + d1) as usize % 4;
+            let npos = pos + Point::new(dx[ndir], dy[ndir]);
+            if self.field[npos.y as usize][npos.x as usize] == Square::WrappedSurface {
+                return false;
+            }
+            let npos = pos2 + Point::new(dx[ndir], dy[ndir]);
+            if self.field[npos.y as usize][npos.x as usize] == Square::WrappedSurface {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    pub fn get_left_bottom_position(&self) -> Point {
+        for y in 0..self.field.height() {
+            for x in 0..self.field.width() {
+                if self.field[y][x] == Square::WrappedSurface {
+                    return Point::new(x as i32, y as i32);
+                }
+            }
+        }
+        panic!("failed");
+    }
+
+    pub fn count_vertex(&self) -> usize {
+        let Map(vertexs) = self.get_map();
+        vertexs.len()
+    }
+
+    pub fn count_area(&self) -> usize {
+        let mut ret = 0;
+        for y in 0..self.field.height() {
+            for x in 0..self.field.width() {
+                if self.field[y][x] == Square::WrappedSurface {
+                    ret += 1;
+                }
+            }
+        }
+        return ret;
+    }
+
+    pub fn get_map(&self) -> Map {
+        let mut pos = self.get_left_bottom_position();
+        let mut vertexs = vec![pos];
+        let mut dir = 0;
+        let mut first = true;
+        loop {
+            if self.one_move(&mut pos, &mut dir, &mut vertexs, &mut first) {
                 break;
             }
         }
         vertexs.pop();
         return Map(vertexs);
+    }
+
+    fn one_move(
+        &self,
+        pos: &mut Point,
+        dir: &mut usize,
+        vertexs: &mut Vec<Point>,
+        first: &mut bool,
+    ) -> bool {
+        let dx = [1, 0, -1, 0];
+        let dy = [0, 1, 0, -1];
+        *dir = (*dir + 3) % 4;
+        for d in 0..4 {
+            let npos = Point::new(pos.x + dx[*dir], pos.y + dy[*dir]);
+            if !*first && *pos == vertexs[0] && *dir == 0 {
+                return true;
+            }
+            if !self.field.in_map(npos)
+                || self.field[npos.y as usize][npos.x as usize] != Square::WrappedSurface
+            {
+                if d == 1 || d == 2 {
+                    let corner = match *dir {
+                        0 => *pos + Point::new(1, 0),
+                        1 => *pos + Point::new(1, 1),
+                        2 => *pos + Point::new(0, 1),
+                        3 => *pos,
+                        _ => panic!(""),
+                    };
+                    vertexs.push(corner);
+                }
+                *dir = (*dir + 1) % 4;
+                continue;
+            }
+            if d == 0 {
+                let corner = match *dir {
+                    0 => *pos + Point::new(1, 0),
+                    1 => *pos + Point::new(1, 1),
+                    2 => *pos + Point::new(0, 1),
+                    3 => *pos,
+                    _ => panic!(""),
+                };
+                vertexs.push(corner);
+            }
+            *pos = npos;
+            *first = false;
+            break;
+        }
+        return false;
     }
 }
 
@@ -139,5 +262,9 @@ fn test_puzzle_example_solve() {
     let puzzle = Puzzle::from(&s);
     let mut solver = PuzzleSolver::new(&puzzle);
     solver.solve();
-    // solver.field.print(0, 0, 150, 150);
+    solver.field.print(0, 0, 150, 150);
+    println!("vertex: {}", solver.count_vertex());
+    println!("{} < vertex < {}", puzzle.v_min, puzzle.v_max);
+    println!("area: {}", solver.count_area());
+    println!("{} < area < {}", puzzle.area_min(), puzzle.area_max());
 }
