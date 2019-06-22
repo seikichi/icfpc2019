@@ -26,6 +26,10 @@ pub enum Action {
 pub struct Solution(pub Vec<Vec<Action>>);
 
 impl Solution {
+    pub fn step(&self) -> i32 {
+        let Solution(sol) = self;
+        return sol[0].len() as i32;
+    }
     pub fn from(s: &str) -> Self {
         let s = s.chars().collect::<Vec<char>>();
 
@@ -128,6 +132,7 @@ fn solution_to_string_test() {
         Action::AttachDrill,
     ]]);
     let s = sol.to_string();
+    assert!(sol.step() == 10);
     assert!(s == "WSADZEQB(1,2)FL".to_string());
     let sol2 = Solution::from(&s);
     assert!(sol == sol2);
@@ -147,6 +152,7 @@ fn solution_to_string_cloning_test() {
         vec![Action::MoveRight],
     ]);
     let s = sol.to_string();
+    assert!(sol.step() == 5);
     assert!(s == "RT(1,1)CCZ#AA#D".to_string());
     let sol2 = Solution::from(&s);
     assert!(sol == sol2);

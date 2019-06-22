@@ -127,5 +127,5 @@ fn test_dfs() {
     };
 
     let mut wrapper = DfsWrapper {};
-    let solution = wrapper.wrap(&task);
+    let _solution = wrapper.wrap(&task);
 }
