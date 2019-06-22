@@ -32,7 +32,9 @@ impl PuzzleSolver {
                 for dx in -1..2 {
                     let ny = p.y + dy;
                     let nx = p.x + dx;
-                    if !field.in_map(Point::new(ny, nx)) || field[ny as usize][nx as usize] == Square::Obstacle {
+                    if !field.in_map(Point::new(ny, nx))
+                        || field[ny as usize][nx as usize] == Square::Obstacle
+                    {
                         continue;
                     }
                     field[ny as usize][nx as usize] = Square::Surface;
@@ -55,12 +57,13 @@ impl PuzzleSolver {
             let mut worker = Worker::new(start_pos);
             worker.manipulators = vec![];
             if let Some((_end_pos, actions)) = self.field.bfs(&worker, Square::Surface, &vec![]) {
-            for &action in actions.iter() {
-                worker.act(action, &mut self.field, &mut vec![0; 10]);
+                for &action in actions.iter() {
+                    worker.act(action, &mut self.field, &mut vec![0; 10]);
+                }
+            } else {
+                break;
             }
-        } else {
-            break;
-        }
+
         }
         let mut rng = rand::thread_rng();
         let initial_field = self.field.clone();
@@ -79,7 +82,7 @@ impl PuzzleSolver {
             for _iter in 0..cnt {
                 let move_cnt = rng.gen::<usize>() % 30 + 3;
                 for _iter2 in 0..move_cnt {
-                    self.one_move(&mut pos, &mut dir, &mut vertexs, &mut first);
+                    self.one_move(&mut pos, &mut dir, &mut vertexs, &mut first, Square::WrappedSurface);
                 }
                 let dx = [1, 0, -1, 0];
                 let dy = [0, 1, 0, -1];
@@ -194,18 +197,49 @@ impl PuzzleSolver {
         ret
     }
 
-    pub fn get_map(&self) -> Map {
+pub fn get_map(&self) -> Map {
         let mut pos = self.get_left_bottom_position();
+        return self.get_area(pos, Square::WrappedSurface);
+}
+pub fn get_obstacle(&mut self) -> Vec<Map> {
+    let mut obstacles = vec![];
+    let mut visited = vec![vec![false; self.field.width()]; self.field.height()];
+    // 
+    for y in 0..self.field.height() {
+        for x in 0..self.field.width() {
+            if self.field[y][x] != Square::WrappedSurface {
+                self.field[y][x] = Square::Obstacle;
+            }
+        }
+    }
+    //
+    for y in 0..self.field.height() {
+        for x in 0..self.field.width() {
+            if visited[y][x] { continue; }
+            let obstacle = self.get_area(Point::new(x as i32, y as i32), Square::Obstacle);
+            obstacles.push(obstacle);
+            self.bfs(Point::new(x as i32, y as i32), &mut visited);
+        }
+    }
+    return obstacles;
+}
+
+    pub fn get_area(&self, pos: Point, target: Square) -> Map {
+        let mut pos = pos;
         let mut vertexs = vec![pos];
         let mut dir = 0;
         let mut first = true;
         loop {
-            if self.one_move(&mut pos, &mut dir, &mut vertexs, &mut first) {
+            if self.one_move(&mut pos, &mut dir, &mut vertexs, &mut first, target) {
                 break;
             }
         }
         vertexs.pop();
         return Map(vertexs);
+    }
+
+    fn bfs(&self, p: Point, visited: &mut Vec<Vec<bool>>) {
+        // TODO
     }
 
     fn one_move(
@@ -214,6 +248,7 @@ impl PuzzleSolver {
         dir: &mut usize,
         vertexs: &mut Vec<Point>,
         first: &mut bool,
+        target: Square,
     ) -> bool {
         let dx = [1, 0, -1, 0];
         let dy = [0, 1, 0, -1];
@@ -224,7 +259,7 @@ impl PuzzleSolver {
                 return true;
             }
             if !self.field.in_map(npos)
-                || self.field[npos.y as usize][npos.x as usize] != Square::WrappedSurface
+                || self.field[npos.y as usize][npos.x as usize] != target
             {
                 if d == 1 || d == 2 {
                     let corner = match *dir {
