@@ -1,6 +1,7 @@
-use lib::task::{Task, Point};
+
 use lib::field::{Field, Square};
-use std::cmp::{min,max};
+use lib::task::{Point, Task};
+use std::cmp::{max, min};
 use std::io::{self, Read};
 
 struct Bounds {
@@ -11,13 +12,18 @@ struct Bounds {
 }
 
 fn set_canvas(scale: i32, bounds: &Bounds) {
-    println!(r#"<g transform="translate(0, {})">"#, (bounds.top as f32 + 0.5) * (scale as f32));
+    println!(
+        r#"<g transform="translate(0, {})">"#,
+        (bounds.top as f32 + 0.5) * (scale as f32)
+    );
     println!(r#"<g transform="scale({}, -{})">"#, scale, scale);
 }
 
 fn draw_rect(x: i32, y: i32, width: i32, height: i32, stroke: &str, fill: &str, stroke_width: i32) {
-    println!(r#"<rect x="{}" y="{}" width="{}" height="{}" stroke="{}" fill="{}" stroke-width="{}" />"#,
-        x, y, width, height, stroke, fill, stroke_width);
+    println!(
+        r#"<rect x="{}" y="{}" width="{}" height="{}" stroke="{}" fill="{}" stroke-width="{}" />"#,
+        x, y, width, height, stroke, fill, stroke_width
+    );
 }
 
 fn get_bounds(task: &Task) -> Bounds {
@@ -34,11 +40,24 @@ fn get_bounds(task: &Task) -> Bounds {
         bottom = min(bottom, point.y);
     }
 
-    Bounds{left, right, top, bottom}
+    Bounds {
+        left,
+        right,
+        top,
+        bottom,
+    }
 }
 
 fn draw_bounding_rect(b: &Bounds) {
-    draw_rect(b.left, b.bottom, b.right - b.left, b.top - b.bottom, "black", "#eee", 0);
+    draw_rect(
+        b.left,
+        b.bottom,
+        b.right - b.left,
+        b.top - b.bottom,
+        "black",
+        "#eee",
+        0,
+    );
 }
 
 fn draw_cell(x: i32, y: i32, color: &str) {
@@ -46,7 +65,10 @@ fn draw_cell(x: i32, y: i32, color: &str) {
 }
 
 fn draw_text(x: f32, y: f32, size: i32, text: &str) {
-    println!(r#"<text x="{}" y="{}" font-size="{}">{}</text>"#, x, y, size, text);
+    println!(
+        r#"<text x="{}" y="{}" font-size="{}">{}</text>"#,
+        x, y, size, text
+    );
 }
 
 fn draw_boosters(task: &Task) {
@@ -54,14 +76,13 @@ fn draw_boosters(task: &Task) {
         let point = &booster.point;
         let code = &booster.code;
         draw_cell(point.x, point.y, "#cc7");
-        draw_text(point.x as f32 + 0.1, point.y as f32+0.8, 1, code.symbol());
+        draw_text(point.x as f32 + 0.1, point.y as f32 + 0.8, 1, code.symbol());
     }
 }
 
 fn draw_obstacles(field: &Field) {
-    let Field(field) = field;
-    for y in 0..field.len() {
-        for x in 0..field[0].len() {
+    for y in 0..field.height() {
+        for x in 0..field.width() {
             if field[y][x] == Square::Obstacle {
                 draw_cell(x as i32, y as i32, "#666");
             }
@@ -79,7 +100,10 @@ fn visualize(s: &str) {
     let screen_width = (bounds.right - bounds.left + 1) * dot_per_unit;
     let screen_height = (bounds.top - bounds.bottom + 1) * dot_per_unit;
 
-    println!(r#"<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {} {}">"#, screen_width, screen_height);
+    println!(
+        r#"<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {} {}">"#,
+        screen_width, screen_height
+    );
 
     set_canvas(dot_per_unit, &bounds);
     draw_bounding_rect(&bounds);
