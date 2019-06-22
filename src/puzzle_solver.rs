@@ -353,7 +353,7 @@ fn test_puzzle_solve() {
     let puzzle = Puzzle {
         b_num: 0,
         e_num: 0,
-        t_size: 10,
+        t_size: 20,
 
         v_min: 1,
         v_max: 100,
@@ -364,7 +364,7 @@ fn test_puzzle_solve() {
     };
     let mut solver = PuzzleSolver::new(&puzzle);
     solver.solve();
-    solver.field.print(0, 0, 9, 9);
+    solver.field.print(0, 0, 40, 40);
     let map = solver.get_map();
     let obstacles = solver.get_obstacles();
     // println!("{:?}", map);
@@ -375,7 +375,7 @@ fn test_puzzle_solve() {
         boosters: vec![],
     };
     let field2 = Field::from(&task);
-    field2.print(0, 0, 9, 9);
+    field2.print(0, 0, 40, 40);
 }
 
 #[test]
