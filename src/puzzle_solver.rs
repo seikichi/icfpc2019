@@ -98,10 +98,14 @@ impl PuzzleSolver {
             let mut pos = self.get_left_bottom_position();
             let mut vertexs = vec![pos];
             let mut dir = 0;
-            let cnt = need_vertex / 2 + 1;
-            for _iter in 0..cnt {
+            let mut cnt = need_vertex / 2 + 1;
+            loop {
+                if cnt == 0 {
+                    break;
+                }
                 let move_cnt = rng.gen::<usize>() % 30 + 3;
                 for _iter2 in 0..move_cnt {
+                    first = true;
                     self.one_move(
                         &mut pos,
                         &mut dir,
@@ -120,6 +124,7 @@ impl PuzzleSolver {
                 }
                 self.field[npos.y as usize][npos.x as usize] = Square::WrappedSurface;
                 pos = npos;
+                cnt -= 1;
             }
             // self.field.print(0, 0, 150, 150);
         }
@@ -162,7 +167,9 @@ impl PuzzleSolver {
         let dx = [1, 0, -1, 0];
         let dy = [0, 1, 0, -1];
         let pos2 = pos + Point::new(dx[dir], dy[dir]);
-        if self.field[pos2.y as usize][pos2.x as usize] == Square::WrappedSurface {
+        if self.field.in_map(pos2)
+            && self.field[pos2.y as usize][pos2.x as usize] == Square::WrappedSurface
+        {
             return false;
         }
         for d1 in -1..2 {
@@ -171,11 +178,15 @@ impl PuzzleSolver {
             }
             let ndir = (dir as i32 + 4 + d1) as usize % 4;
             let npos = pos + Point::new(dx[ndir], dy[ndir]);
-            if self.field[npos.y as usize][npos.x as usize] == Square::WrappedSurface {
+            if self.field.in_map(npos)
+                && self.field[npos.y as usize][npos.x as usize] == Square::WrappedSurface
+            {
                 return false;
             }
             let npos = pos2 + Point::new(dx[ndir], dy[ndir]);
-            if self.field[npos.y as usize][npos.x as usize] == Square::WrappedSurface {
+            if self.field.in_map(npos)
+                && self.field[npos.y as usize][npos.x as usize] == Square::WrappedSurface
+            {
                 return false;
             }
         }
@@ -224,9 +235,10 @@ impl PuzzleSolver {
     }
 
     pub fn get_map(&self) -> Map {
-        let mut pos = self.get_left_bottom_position();
+        let pos = self.get_left_bottom_position();
         return self.get_area(pos, Square::WrappedSurface);
     }
+
     pub fn get_obstacles(&mut self) -> Vec<Map> {
         let mut obstacles = vec![];
         let mut visited = vec![vec![false; self.field.width()]; self.field.height()];
@@ -355,12 +367,12 @@ fn test_puzzle_solve() {
         e_num: 0,
         t_size: 20,
 
-        v_min: 1,
-        v_max: 100,
+        v_min: 130,
+        v_max: 300,
         booster_num: vec![0; 6],
 
         i_seq: vec![Point::new(5, 2), Point::new(1, 1), Point::new(3, 7)],
-        o_seq: vec![Point::new(2, 1), Point::new(3, 2)],
+        o_seq: vec![Point::new(2, 1), Point::new(4, 2)],
     };
     let mut solver = PuzzleSolver::new(&puzzle);
     solver.solve();
@@ -368,6 +380,7 @@ fn test_puzzle_solve() {
     let map = solver.get_map();
     let obstacles = solver.get_obstacles();
     // println!("{:?}", map);
+    // println!("{:?}", obstacles);
     let task = Task {
         map: map,
         point: Point::new(5, 2),
