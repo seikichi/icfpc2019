@@ -17,6 +17,9 @@ pub enum Action {
     AttachManipulator { dx: i32, dy: i32 },
     AttachFastWheels,
     AttachDrill,
+    InstallBeacon,
+    Teleports { x: i32, y: i32 },
+    Cloning,
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
@@ -38,18 +41,19 @@ impl Solution {
                 'E' => Action::TurnCW,
                 'Q' => Action::TurnCCW,
                 'B' => {
-                    pos += 1;
-                    let mut end = pos;
-                    while s[end] != ')' {
-                        end += 1;
-                    }
-                    let p = s[pos..end + 1].iter().collect::<String>();
-                    let p = Point::from(&p);
+                    let (p, end) = Point::read(&s, pos + 1);
                     pos = end;
                     Action::AttachManipulator { dx: p.x, dy: p.y }
                 }
                 'F' => Action::AttachFastWheels,
                 'L' => Action::AttachDrill,
+                'R' => Action::InstallBeacon,
+                'T' => {
+                    let (p, end) = Point::read(&s, pos + 1);
+                    pos = end;
+                    Action::Teleports { x: p.x, y: p.y }
+                },
+                'C' => Action::Cloning,
                 _ => panic!("wrong character"),
             };
             pos += 1;
@@ -74,6 +78,9 @@ impl Solution {
                 Action::AttachManipulator { dx, dy } => format!("B({},{})", dx, dy),
                 Action::AttachFastWheels => "F".to_string(),
                 Action::AttachDrill => "L".to_string(),
+                Action::InstallBeacon => "R".to_string(),
+                Action::Teleports{ x, y } => format!("T({},{})", x, y),
+                Action::Cloning=> "C".to_string(),
             };
             ret.push_str(&s);
         }
