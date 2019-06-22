@@ -21,6 +21,14 @@ impl Field {
         let Field(f) = self;
         return f[0].len() as i32;
     }
+    pub fn in_map(&self, p: Point) -> bool {
+        return 0 <= p.x && p.x < self.width() as i32 && 0 <= p.y && p.y < self.height() as i32;
+    }
+    pub fn movable(&self, p: Point) -> bool {
+        return self.in_map(p) && self[p.y as usize][p.x as usize] != Square::Obstacle;
+    }
+
+
     pub fn from(task: &Task) -> Self {
         let Map(map) = &task.map;
         let x = map.iter().map(|p| p.x).max().unwrap() as usize;

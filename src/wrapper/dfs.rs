@@ -15,12 +15,7 @@ impl Wrapper for DfsWrapper {
             field[current.y as usize][current.x as usize] = Square::WrappedSurface;
             for &p in manipulators.iter() {
                 let np = current + p;
-                if np.x < 0
-                    || np.y < 0
-                    || np.x >= field.width()
-                    || np.y >= field.height()
-                    || field[np.y as usize][np.x as usize] == Square::Obstacle
-                {
+                if !field.movable(np) {
                     continue;
                 }
                 field[np.y as usize][np.x as usize] = Square::WrappedSurface
@@ -65,7 +60,7 @@ impl DfsWrapper {
                             (y, x + 1, Action::MoveLeft),
                         ];
                         for &(ny, nx, a) in &ns {
-                            if ny < 0 || ny >= h as i32 || nx < 0 || nx >= w as i32 {
+                            if !field.in_map(Point::new(nx, ny)) {
                                 continue;
                             }
                             let ncost = visited[ny as usize][nx as usize];
@@ -91,16 +86,14 @@ impl DfsWrapper {
                 (p.y, p.x + 1),
             ];
             for &(ny, nx) in &ns {
-                if ny < 0 || ny >= h as i32 || nx < 0 || nx >= w as i32 {
+                let np = Point::new(nx, ny);
+                if !field.movable(np) {
                     continue;
                 }
                 if visited[ny as usize][nx as usize] != -1 {
                     continue;
                 }
-                if field[ny as usize][nx as usize] == Square::Obstacle {
-                    continue;
-                }
-                queue.push_back((Point::new(nx, ny), cost + 1));
+                queue.push_back((np, cost + 1));
             }
         }
         None
