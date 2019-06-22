@@ -204,6 +204,49 @@ impl PuzzleSolver {
         }
     }
 
+    pub fn contains_invalid_obstacle(&self) -> bool {
+        let mut visited = vec![vec![false; self.field.width()]; self.field.height()];
+
+        for y in 0..self.field.height() {
+            for x in 0..self.field.width() {
+                if self.field[y][x] != Square::Obstacle {
+                    continue;
+                }
+                if !self.is_obstacle_reach_outside(Point::new(x as i32, y as i32), &mut visited) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    pub fn is_obstacle_reach_outside(&self, pos: Point, visited: &mut Vec<Vec<bool>>) -> bool {
+        let mut que = std::collections::VecDeque::new();
+        que.push_back(pos);
+
+        while let Some(cur) = que.pop_front() {
+            visited[cur.y as usize][cur.x as usize] = true;
+
+            let dx = [1, 0, -1, 0];
+            let dy = [0, 1, 0, -1];
+            for d in 0..4 {
+                let npos = cur + Point::new(dx[d], dy[d]);
+                if !self.field.in_map(npos) {
+                    return true;
+                }
+                let nsquare = self.field[npos.y as usize][npos.x as usize];
+                if nsquare != Square::Obstacle && nsquare != Square::Unknown {
+                    continue;
+                }
+                if visited[npos.y as usize][npos.x as usize] {
+                    continue;
+                }
+                que.push_back(npos);
+            }
+        }
+        false
+    }
+
     pub fn can_set(&self, pos: Point, dir: usize) -> bool {
         let dx = [1, 0, -1, 0];
         let dy = [0, 1, 0, -1];
