@@ -383,8 +383,8 @@ fn test_field_from() {
         ],
         vec![
             Square::Unknown,
-            Square::Obstacle,
-            Square::Obstacle,
+            Square::Unknown,
+            Square::Unknown,
             Square::Unknown,
         ],
         vec![
