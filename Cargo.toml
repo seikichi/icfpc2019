@@ -23,3 +23,7 @@ path = "src/main_cloning.rs"
 [[bin]]
 name = "visualize"
 path = "src/visualize.rs"
+
+[[bin]]
+name = "puzzler"
+path = "src/puzzler.rs"

@@ -1,4 +1,3 @@
-
 use crate::field::*;
 use crate::puzzle::*;
 use crate::task::*;
@@ -8,8 +7,8 @@ use rand::Rng;
 pub struct PuzzleSolver {
     puzzle: Puzzle,
     field: Field,
-    start_point: Point,
-    boosters: Vec<BoosterLocation>,
+    pub start_point: Point,
+    pub boosters: Vec<BoosterLocation>,
 }
 
 impl PuzzleSolver {
@@ -103,7 +102,10 @@ impl PuzzleSolver {
                         first = false;
                     } else {
                         if let Some(booster) = rest_boosters.pop() {
-                            self.boosters.push(BoosterLocation{code: booster, point: Point::new(x as i32, y as i32)});
+                            self.boosters.push(BoosterLocation {
+                                code: booster,
+                                point: Point::new(x as i32, y as i32),
+                            });
                         }
                     }
                 }
