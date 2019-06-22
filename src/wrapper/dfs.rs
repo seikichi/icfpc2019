@@ -61,6 +61,9 @@ impl Field {
 
         // TODO: fill obstacles inside ...
         for Map(points) in &task.obstacles {
+            if points.len() < 2 {
+                continue;
+            }
             let mut prev = &points[0];
             let mut ps = points.clone();
             ps.push(points[0].clone());
@@ -97,17 +100,17 @@ impl Wrapper for DfsWrapper {
         let mut solution = vec![];
         let mut field = Field::from(task);
         let mut current = task.point.clone();
-        while let Some(Solution(s)) = self.dfs(&mut current, &mut field) {
+        while let Some(s) = self.dfs(&mut current, &mut field) {
             let Field(field) = &mut field;
             field[current.y as usize][current.x as usize] = Square::WrappedSurface;
             solution.extend(s);
         }
-        Solution(solution)
+        Solution(vec![solution])
     }
 }
 
 impl DfsWrapper {
-    fn dfs(&mut self, current: &mut Point, field: &mut Field) -> Option<Solution> {
+    fn dfs(&mut self, current: &mut Point, field: &mut Field) -> Option<Vec<Action>> {
         let Field(field) = field;
         let w = field[0].len();
         let h = field.len();
@@ -155,7 +158,7 @@ impl DfsWrapper {
                     }
 
                     actions.reverse();
-                    return Some(Solution(vec![actions]));
+                    return Some(actions);
                 }
                 _ => {}
             }
