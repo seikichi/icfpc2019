@@ -49,6 +49,7 @@ async function submit(params) {
 }
 
 (async () => {
+  let last = 0;
   while (true) {
     console.log("Sleep 10 seconds ...");
     await new Promise(resolve => setTimeout(resolve, 10 * 1000));
@@ -56,6 +57,11 @@ async function submit(params) {
     try {
       const { block, puzzle, task, excluded } = (await getblockinfo()).result;
       console.log(`block = ${block}`);
+
+      if (last === block) {
+        console.log(`This block is already submitted, skip.`);
+        continue;
+      }
 
       if (excluded.indexOf(publicId) !== -1) {
         console.log(`blockinfo.excluded contains ${publicId}, skip.`);
@@ -80,7 +86,7 @@ async function submit(params) {
         });
       });
 
-      // T.B.D.
+      // T.B.D. (exec puzzler);
 
       const solutionResult = await utils.checkSolution(inTaskPath, outSolutionPath);
       if (!solutionResult.success) {
@@ -88,18 +94,20 @@ async function submit(params) {
         continue;
       }
 
-      // const puzzleResult = await utils.checkPuzzle(inPuzzlePath, outTaskPath);
-      // if (!puzzleResult.success) {
-      //   console.log(`Puzzle Chcker Failed: ${JSON.stringify(puzzleResult)}`);
-      //   continue;
-      // }
+      const puzzleResult = await utils.checkPuzzle(inPuzzlePath, outTaskPath);
+      if (!puzzleResult.success) {
+        console.log(`Puzzle Chcker Failed: ${JSON.stringify(puzzleResult)}`);
+        continue;
+      }
 
-      // const result = submit([
-      //   block,
-      //   path.resolve(outSolutionPath),
-      //   path.resolve(outTaskPath),
-      // ]);
-      // console.log(`Done: ${JSON.stringify(result)}`);
+      const result = submit([
+        block,
+        path.resolve(outSolutionPath),
+        path.resolve(outTaskPath),
+      ]);
+
+      console.log(`Done: ${JSON.stringify(result)}`);
+      last = block;
     } catch (e) {
       console.log(e);
     }
