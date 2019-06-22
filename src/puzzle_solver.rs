@@ -352,6 +352,15 @@ impl PuzzleSolver {
                     vertexs.push(corner);
                 }
                 *dir = (*dir + 1) % 4;
+                if d == 3 {
+                    *vertexs = vec![
+                        *pos,
+                        *pos + Point::new(1, 0),
+                        *pos + Point::new(1, 1),
+                        *pos + Point::new(0, 1),
+                    ];
+                    return true;
+                }
                 continue;
             }
             if d == 0 {
