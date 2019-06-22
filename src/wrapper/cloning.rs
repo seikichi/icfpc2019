@@ -11,6 +11,7 @@ enum GoalKind {
     GetCloningBooster,
     Cloning,
     Wrap,
+    _RandomMove,
     Nothing,
 }
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
@@ -29,7 +30,7 @@ impl WorkerGoal {
     }
     fn nop() -> WorkerGoal {
         WorkerGoal {
-            kind: GoalKind::GetCloningBooster,
+            kind: GoalKind::Nothing,
             p: Point::new(0, 0),
             actions: VecDeque::from_iter([Action::DoNothing].iter().cloned()),
         }
@@ -69,20 +70,10 @@ impl Wrapper for CloningWrapper {
                 solution.push(vec![]);
             }
             self.next_turn_workers = vec![];
+            // println!("{:?}", self.workers);
+            // println!("{:?}", self.worker_goals);
         }
         return Solution(solution);
-        // find cloning booster
-        // while let Some(s) = self.dfs(&mut current, &mut field) {
-        //     field[current.y as usize][current.x as usize] = Square::WrappedSurface;
-        //     for &p in manipulators.iter() {
-        //         let np = current + p;
-        //         if !field.movable(np) {
-        //             continue;
-        //         }
-        //         field[np.y as usize][np.x as usize] = Square::WrappedSurface
-        //     }
-        //     solution.extend(s);
-        // }
     }
 }
 
@@ -147,9 +138,12 @@ impl CloningWrapper {
             } else {
                 (GoalKind::Wrap, Square::Surface)
             };
-            if let Some((p, actions)) =
+            if let Some((p, mut actions)) =
                 CloningWrapper::bfs(&self.field, &self.workers[index], target, &vec![])
             {
+                if kind == GoalKind::Cloning {
+                    actions.push(Action::Cloning);
+                }
                 self.worker_goals[index] = WorkerGoal::new(kind, p, actions);
             }
         }
@@ -198,7 +192,7 @@ impl CloningWrapper {
                 continue;
             }
             visited[y][x] = cost;
-            if field[y][x] == target {
+            if field[y][x] == target || field.booster_field[y][x] == target {
                 let end_p = Point::new(x as i32, y as i32);
                 let mut actions = vec![];
                 let mut y = y as i32;
@@ -229,6 +223,9 @@ impl CloningWrapper {
                 }
 
                 actions.reverse();
+                if actions.is_empty() {
+                    actions.push(Action::DoNothing);
+                }
                 return Some((end_p, actions));
             }
 
@@ -254,7 +251,7 @@ impl CloningWrapper {
 }
 
 #[test]
-fn test_cloning() {
+fn test_cloning_nocloning() {
     // .X..
     // .**.
     // sF..
@@ -272,6 +269,41 @@ fn test_cloning() {
         Point::new(1, 2),
     ])];
     let boosters = vec![
+        BoosterLocation::new(BoosterCode::FastWheels, Point::new(1, 0)),
+        BoosterLocation::new(BoosterCode::MysteriousPoint, Point::new(1, 2)),
+    ];
+    let point = Point::new(0, 0);
+    let task = Task {
+        point,
+        map,
+        obstacles,
+        boosters,
+    };
+
+    let mut wrapper = CloningWrapper::new(&task);
+    let _solution = wrapper.wrap(&task);
+}
+
+#[test]
+fn test_cloning_with_cloning() {
+    // .X..
+    // C**.
+    // sF..
+
+    let map = Map(vec![
+        Point::new(0, 0),
+        Point::new(4, 0),
+        Point::new(4, 3),
+        Point::new(0, 3),
+    ]);
+    let obstacles = vec![Map(vec![
+        Point::new(1, 1),
+        Point::new(3, 1),
+        Point::new(3, 2),
+        Point::new(1, 2),
+    ])];
+    let boosters = vec![
+        BoosterLocation::new(BoosterCode::Cloning, Point::new(0, 1)),
         BoosterLocation::new(BoosterCode::FastWheels, Point::new(1, 0)),
         BoosterLocation::new(BoosterCode::MysteriousPoint, Point::new(1, 2)),
     ];
