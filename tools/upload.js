@@ -33,26 +33,29 @@ async function upload(key, solutionPath) {
   } catch (error) {
     if (error.code === 'NotFound') {
       console.log(`${key} does not exists, upload the given solution.`);
-      upload(key, solutionPath);
+      // upload(key, solutionPath);
       return;
     }
     throw error;
   }
   const object = await s3.getObject({ Key: key }).promise();
 
-  const tmpFile = tmp.fileSync();
-  fs.writeFileSync(tmpFile.name, object.Body);
+  // const tmpFile = tmp.fileSync();
+  // fs.writeFileSync(tmpFile.name, object.Body);
+  // const prev = await utils.check(taskPath, tmpFile.name);
+  // if (!prev.success) {
+  //   console.error(`ERROR: invalid solution in the S3 bucket!!! (key = ${key})`);
+  //   process.exit(-1);
+  // }
+  // const prev_timeunits = prev.timeunits;
 
-  const prev = await utils.check(taskPath, tmpFile.name);
-  if (!prev.success) {
-    console.error(`ERROR: invalid solution in the S3 bucket!!! (key = ${key})`);
-    process.exit(-1);
-  }
+  const actions = object.Body.toString().split('#')[0];
+  const prev_timeunits = actions.match(/[A-Z]/g).length;
 
-  if (current.timeunits < prev.timeunits) {
-    console.log(`The given solution (${current.timeunits}) seems better than old one (${prev.timeunits}), upload it ... (key = ${key})`);
+  if (current.timeunits < prev_timeunits) {
+    console.log(`The given solution (${current.timeunits}) seems better than old one (${prev_timeunits}), upload it ... (key = ${key})`);
     upload(key, solutionPath);
   }
 
-  tmpFile.removeCallback();
+  // tmpFile.removeCallback();
 })();
