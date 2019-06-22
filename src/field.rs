@@ -13,13 +13,13 @@ pub enum Square {
 pub struct Field(pub Vec<Vec<Square>>);
 
 impl Field {
-    pub fn height(&self) -> i32 {
+    pub fn height(&self) -> usize {
         let Field(f) = self;
-        return f.len() as i32;
+        return f.len();
     }
-    pub fn width(&self) -> i32 {
+    pub fn width(&self) -> usize{
         let Field(f) = self;
-        return f[0].len() as i32;
+        return f[0].len();
     }
     pub fn in_map(&self, p: Point) -> bool {
         return 0 <= p.x && p.x < self.width() as i32 && 0 <= p.y && p.y < self.height() as i32;

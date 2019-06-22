@@ -34,7 +34,7 @@ impl DfsWrapper {
         let mut queue = std::collections::VecDeque::new();
         queue.push_back((*current, 0));
 
-        let mut visited = vec![vec![-1; w as usize]; h as usize];
+        let mut visited = vec![vec![-1; w]; h];
 
         while let Some((p, cost)) = queue.pop_front() {
             let y = p.y as usize;
