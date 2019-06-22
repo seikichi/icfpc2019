@@ -17,7 +17,7 @@ fn main() -> io::Result<()> {
     let task = Task {
         map: solver.get_map(),
         point: solver.start_point,
-        obstacles: obstacles,
+        obstacles: vec![], // obstacles,
         boosters: solver.boosters,
     };
     println!("{}", task.to_string());

@@ -112,11 +112,11 @@ impl PuzzleSolver {
             // check self intersection & visitable all obstacle
             // self.field.print(0, 0, 150, 150);
             // self.field.print(0, 0, 150, 150);
-            println!(
-                "inteseciton: {}\n invalid: {}",
-                self.self_intersection(),
-                self.contains_invalid_obstacle()
-            );
+            // println!(
+            //     "inteseciton: {}\n invalid: {}",
+            //     self.self_intersection(),
+            //     self.contains_invalid_obstacle()
+            // );
             if self.self_intersection() || self.contains_invalid_obstacle() {
                 // retry
                 self.field = initial_field;
@@ -203,7 +203,7 @@ impl PuzzleSolver {
 
         for y in 0..self.field.height() {
             for x in 0..self.field.width() {
-                if self.field[y][x] != Square::Obstacle {
+                if visited[y][x] || self.field[y][x] != Square::Obstacle {
                     continue;
                 }
                 if !self.is_obstacle_reach_outside(Point::new(x as i32, y as i32), &mut visited) {
@@ -215,10 +215,14 @@ impl PuzzleSolver {
     }
 
     pub fn is_obstacle_reach_outside(&self, pos: Point, visited: &mut Vec<Vec<bool>>) -> bool {
+        let mut ret = false;
         let mut que = std::collections::VecDeque::new();
         que.push_back(pos);
 
         while let Some(cur) = que.pop_front() {
+            if visited[cur.y as usize][cur.x as usize] {
+                continue;
+            }
             visited[cur.y as usize][cur.x as usize] = true;
 
             let dx = [1, 0, -1, 0];
@@ -226,7 +230,8 @@ impl PuzzleSolver {
             for d in 0..4 {
                 let npos = cur + Point::new(dx[d], dy[d]);
                 if !self.field.in_map(npos) {
-                    return true;
+                    ret = true;
+                    continue;
                 }
                 let nsquare = self.field[npos.y as usize][npos.x as usize];
                 if nsquare != Square::Obstacle && nsquare != Square::Unknown {
@@ -238,7 +243,7 @@ impl PuzzleSolver {
                 que.push_back(npos);
             }
         }
-        false
+        return ret;
     }
 
     pub fn can_set(&self, pos: Point, dir: usize) -> bool {
