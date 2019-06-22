@@ -231,10 +231,10 @@ impl CloningWrapper {
             }
 
             let ns = [
+                (p.y, p.x + 1),
+                (p.y, p.x - 1),
                 (p.y - 1, p.x),
                 (p.y + 1, p.x),
-                (p.y, p.x - 1),
-                (p.y, p.x + 1),
             ];
             for &(ny, nx) in &ns {
                 let np = Point::new(nx, ny);
