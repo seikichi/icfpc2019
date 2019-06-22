@@ -22,12 +22,14 @@ const puppeteer = require('puppeteer');
 
   await page.click('#execute_solution');
   await page.waitForFunction('/^(Success|Failed)/.test(document.querySelector("#output").innerText)');
-  const result = await page.$eval("#output", output => output.textContent);
-  console.log(result);
-
+  const output = await page.$eval("#output", output => output.textContent);
   await browser.close();
 
-  if (!result.startsWith('Success')) {
+  const success = output.startsWith('Success');
+  const result = { success, timeunits: success ? parseInt(output.match(/[0-9]+/)[0], 10) : null };
+  console.log(JSON.stringify(result));
+
+  if (!output.startsWith('Success')) {
     process.exit(-1);
   }
 })();

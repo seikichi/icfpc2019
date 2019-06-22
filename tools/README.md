@@ -6,14 +6,13 @@
 
 ```sh
 > node tools/checker.js path/to/prob-010.desc path/to/prob-010.sol
-Success!
-Your solution took 585 time units
+{"success":true, "timeunits":585}
 
 > echo $?
 0
 
 > node tools/checker.js path/to/prob-010.desc path/to/prob-011.sol
-Failed: Non-allowed action performed at location (2,46)
+{"success":false, "timeunits":null}
 
 > echo $?
 255
