@@ -53,15 +53,15 @@ impl DfsWrapper {
                             (y, x - 1, Action::MoveRight),
                             (y, x + 1, Action::MoveLeft),
                         ];
-                        for (ny, nx, a) in &ns {
-                            if *ny < 0 || *ny >= h as i32 || *nx < 0 || *nx >= w as i32 {
+                        for &(ny, nx, a) in &ns {
+                            if ny < 0 || ny >= h as i32 || nx < 0 || nx >= w as i32 {
                                 continue;
                             }
-                            let ncost = visited[*ny as usize][*nx as usize];
+                            let ncost = visited[ny as usize][nx as usize];
                             if cost == ncost + 1 {
-                                actions.push(*a);
-                                y = *ny;
-                                x = *nx;
+                                actions.push(a);
+                                y = ny;
+                                x = nx;
                                 break;
                             }
                         }
@@ -79,17 +79,17 @@ impl DfsWrapper {
                 (p.y, p.x - 1),
                 (p.y, p.x + 1),
             ];
-            for (ny, nx) in &ns {
-                if *ny < 0 || *ny >= h as i32 || *nx < 0 || *nx >= w as i32 {
+            for &(ny, nx) in &ns {
+                if ny < 0 || ny >= h as i32 || nx < 0 || nx >= w as i32 {
                     continue;
                 }
-                if visited[*ny as usize][*nx as usize] != -1 {
+                if visited[ny as usize][nx as usize] != -1 {
                     continue;
                 }
-                if field[*ny as usize][*nx as usize] == Square::Obstacle {
+                if field[ny as usize][nx as usize] == Square::Obstacle {
                     continue;
                 }
-                queue.push_back((Point::new(*nx, *ny), cost + 1));
+                queue.push_back((Point::new(nx, ny), cost + 1));
             }
         }
         None
