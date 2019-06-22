@@ -70,6 +70,10 @@ impl Worker {
                 self.drill_time = 30;
             }
             Action::Cloning => {
+                let mystery_point = Square::Booster{ code: BoosterCode::MysteriousPoint };
+                if field[self.p.y as usize][self.p.x as usize] != mystery_point {
+                    panic!("Here is not Mysterious Point");
+                }
                 booster_cnts[BoosterCode::Cloning as usize] -= 1;
                 unimplemented!();
             }
