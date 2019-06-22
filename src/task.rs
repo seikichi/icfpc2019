@@ -1,6 +1,5 @@
 use std::fs;
 use std::io::Read;
-// use std::io::Write;
 use std::path::Path;
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord)]
@@ -53,6 +52,17 @@ impl Map {
         }
         Map(points)
     }
+    pub fn to_string(&self) -> String {
+        let mut ret = "".to_string();
+        let Map(map) = self;
+        for (i, point) in map.iter().enumerate() {
+            ret.push_str(&point.to_string());
+            if i != map.len() - 1 {
+                ret.push(',');
+            }
+        }
+        return ret;
+    }
 }
 
 impl Task {
@@ -84,6 +94,28 @@ impl Task {
         f.read_to_string(&mut s).unwrap();
         let ret = Task::from(&s);
         ret
+    }
+    pub fn to_string(&self) -> String {
+        let mut ret = "".to_string();
+        ret.push_str(&self.map.to_string());
+        ret.push('#');
+        ret.push_str(&self.point.to_string());
+        ret.push('#');
+
+        for (i, map) in self.obstacles.iter().enumerate() {
+            ret.push_str(&map.to_string());
+            if i != self.obstacles.len() - 1 {
+                ret.push(';');
+            }
+        }
+        ret.push('#');
+        for (i, booster) in self.boosters.iter().enumerate() {
+            ret.push_str(&booster.to_string());
+            if i != self.boosters.len() - 1 {
+                ret.push(';');
+            }
+        }
+        return ret;
     }
 }
 
@@ -122,6 +154,13 @@ impl BoosterLocation {
     pub fn new(code: BoosterCode, point: Point) -> Self {
         Self { code, point }
     }
+
+    pub fn to_string(&self) -> String {
+        let mut ret = "".to_string();
+        ret.push_str(self.code.symbol());
+        ret.push_str(&self.point.to_string());
+        ret
+    }
 }
 
 impl Point {
@@ -158,6 +197,15 @@ impl Point {
     }
     pub fn manhattan_dist(self) -> i32 {
         self.x + self.y
+    }
+    pub fn to_string(&self) -> String {
+        let mut ret = "".to_string();
+        ret.push('(');
+        ret.push_str(&self.x.to_string());
+        ret.push(',');
+        ret.push_str(&self.y.to_string());
+        ret.push(')');
+        return ret;
     }
 }
 impl std::ops::Add<Point> for Point {
@@ -238,4 +286,77 @@ fn test_point_ops() {
     let mut p1 = Point::new(10, 20);
     p1 -= p2;
     assert!(p1 == Point::new(9, 18));
+}
+
+#[test]
+fn test_task_to_string() {
+    let map = Map(vec![
+        Point::new(0, 0),
+        Point::new(10, 0),
+        Point::new(10, 10),
+        Point::new(0, 10),
+    ]);
+    let point = Point::new(0, 0);
+    let obstacles = vec![
+        Map(vec![
+            Point::new(4, 2),
+            Point::new(6, 2),
+            Point::new(6, 7),
+            Point::new(4, 7),
+        ]),
+        Map(vec![
+            Point::new(5, 8),
+            Point::new(6, 8),
+            Point::new(6, 9),
+            Point::new(5, 9),
+        ]),
+    ];
+    let boosters = vec![
+        BoosterLocation::new(BoosterCode::ExtensionOfTheManipulator, Point::new(0, 1)),
+        BoosterLocation::new(BoosterCode::ExtensionOfTheManipulator, Point::new(1, 1)),
+        BoosterLocation::new(BoosterCode::FastWheels, Point::new(0, 2)),
+        BoosterLocation::new(BoosterCode::FastWheels, Point::new(1, 2)),
+        BoosterLocation::new(BoosterCode::Drill, Point::new(0, 3)),
+        BoosterLocation::new(BoosterCode::MysteriousPoint, Point::new(0, 9)),
+        BoosterLocation::new(BoosterCode::Teleport, Point::new(3, 9)),
+        BoosterLocation::new(BoosterCode::Cloning, Point::new(1, 9)),
+    ];
+    let task = Task {
+        map: map,
+        point: point,
+        obstacles: obstacles,
+        boosters: boosters,
+    };
+    let expected = "(0,0),(10,0),(10,10),(0,10)#(0,0)#(4,2),(6,2),(6,7),(4,7);(5,8),(6,8),(6,9),(5,9)#B(0,1);B(1,1);F(0,2);F(1,2);L(0,3);X(0,9);R(3,9);C(1,9)";
+    assert_eq!(expected, task.to_string())
+}
+
+#[test]
+fn test_task_to_string_2() {
+    let map = Map(vec![
+        Point::new(0, 0),
+        Point::new(10, 0),
+        Point::new(10, 10),
+        Point::new(0, 10),
+    ]);
+    let point = Point::new(0, 0);
+    let obstacles = vec![];
+    let boosters = vec![
+        BoosterLocation::new(BoosterCode::ExtensionOfTheManipulator, Point::new(0, 1)),
+        BoosterLocation::new(BoosterCode::ExtensionOfTheManipulator, Point::new(1, 1)),
+        BoosterLocation::new(BoosterCode::FastWheels, Point::new(0, 2)),
+        BoosterLocation::new(BoosterCode::FastWheels, Point::new(1, 2)),
+        BoosterLocation::new(BoosterCode::Drill, Point::new(0, 3)),
+        BoosterLocation::new(BoosterCode::MysteriousPoint, Point::new(0, 9)),
+        BoosterLocation::new(BoosterCode::Teleport, Point::new(3, 9)),
+        BoosterLocation::new(BoosterCode::Cloning, Point::new(1, 9)),
+    ];
+    let task = Task {
+        map: map,
+        point: point,
+        obstacles: obstacles,
+        boosters: boosters,
+    };
+    let expected = "(0,0),(10,0),(10,10),(0,10)#(0,0)##B(0,1);B(1,1);F(0,2);F(1,2);L(0,3);X(0,9);R(3,9);C(1,9)";
+    assert_eq!(expected, task.to_string())
 }
