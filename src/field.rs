@@ -1,4 +1,108 @@
+use crate::solution::*;
 use crate::task::*;
+use crate::union_find::*;
+pub struct Worker {
+    pub p: Point,
+    pub manipulators: Vec<Point>,
+    pub cw_rotation_count: i32,
+    pub fast_time: i32,
+    pub drill_time: i32,
+}
+
+impl Worker {
+    pub fn new(p: Point) -> Self {
+        Worker {
+            p: p,
+            manipulators: vec![Point::new(1, -1), Point::new(1, 0), Point::new(1, 1)],
+            cw_rotation_count: 0,
+            fast_time: 0,
+            drill_time: 0,
+        }
+    }
+    pub fn movement(&mut self, p: Point, field: &mut Field, booster_cnts: &mut Vec<usize>) {
+        let cnt = if self.fast_time > 0 { 2 } else { 1 };
+        for iter in 0..cnt {
+            let np = self.p + p;
+            let movable = if self.drill_time > 0 {
+                field.in_map(np)
+            } else {
+                field.movable(np)
+            };
+            if iter == 0 && !movable {
+                panic!("can't move!")
+            }
+            if !movable {
+                continue;
+            }
+            self.p = np;
+            field.update_surface(self, booster_cnts);
+        }
+    }
+    // TODO boosterの所持個数一覧を&mutで貰ってチェック・更新する
+    pub fn act(&mut self, action: Action, field: &mut Field, booster_cnts: &mut Vec<usize>) {
+        match action {
+            Action::MoveUp => {
+                self.movement(Point::new(0, 1), field, booster_cnts);
+            }
+            Action::MoveDown => {
+                self.movement(Point::new(0, -1), field, booster_cnts);
+            }
+            Action::MoveLeft => {
+                self.movement(Point::new(1, 0), field, booster_cnts);
+            }
+            Action::MoveRight => {
+                self.movement(Point::new(-1, 0), field, booster_cnts);
+            }
+            Action::DoNothing => {
+                field.update_surface(self, booster_cnts);
+            }
+            Action::AttachManipulator { dx, dy } => {
+                booster_cnts[BoosterCode::ExtensionOfTheManipulator as usize] -= 1;
+                self.manipulators.push(Point::new(dx, dy));
+                self.check_manipulator_constraint();
+                field.update_surface(self, booster_cnts);
+            }
+            Action::AttachFastWheels => {
+                booster_cnts[BoosterCode::FastWheels as usize] -= 1;
+                self.fast_time = 50;
+            }
+            Action::AttachDrill => {
+                booster_cnts[BoosterCode::Drill as usize] -= 1;
+                self.drill_time = 30;
+            }
+            Action::Cloning => {
+                booster_cnts[BoosterCode::Cloning as usize] -= 1;
+                unimplemented!();
+            }
+            Action::TurnCW => {
+                self.cw_rotation_count = (self.cw_rotation_count + 1) % 4;
+            }
+            Action::TurnCCW => {
+                self.cw_rotation_count = (self.cw_rotation_count + 3) % 4;
+            }
+            _ => unimplemented!(),
+        }
+        self.fast_time -= 1;
+        self.drill_time -= 1;
+    }
+    fn check_manipulator_constraint(&self) {
+        let n = self.manipulators.len();
+        let mut uf = UnionFind::new(n);
+        for i in 0..n {
+            for j in i + 1..n {
+                if self.manipulators[i] == self.manipulators[j] {
+                    panic!("multi manipulator is same position");
+                }
+                if (self.manipulators[i] - self.manipulators[j]).manhattan_dist() == 1 {
+                    uf.union_set(i, j);
+                }
+            }
+        }
+        if uf.size(0) != n {
+            panic!("Manipulator constraint is not satisfied");
+        }
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
 pub enum Square {
@@ -17,7 +121,7 @@ impl Field {
         let Field(f) = self;
         return f.len();
     }
-    pub fn width(&self) -> usize{
+    pub fn width(&self) -> usize {
         let Field(f) = self;
         return f[0].len();
     }
@@ -26,6 +130,30 @@ impl Field {
     }
     pub fn movable(&self, p: Point) -> bool {
         return self.in_map(p) && self[p.y as usize][p.x as usize] != Square::Obstacle;
+    }
+    pub fn update_surface(&mut self, worker: &Worker, booster_cnts: &mut Vec<usize>) {
+        if (worker.drill_time > 0 && !self.in_map(worker.p)) || !self.movable(worker.p) {
+            panic!("can't move this postion");
+        }
+        // get booster
+        let booster = match self[worker.p.y as usize][worker.p.x as usize] {
+            Square::Booster { code } if code == BoosterCode::MysteriousPoint => {},
+            Square::Booster { code } => {
+                booster_cnts[code as usize] += 1;
+            },
+            _ => {},
+        };
+        // update wrapped surface
+        self[worker.p.y as usize][worker.p.x as usize] = Square::WrappedSurface;
+        for &p in worker.manipulators.iter() {
+            let p = p.rotate(worker.cw_rotation_count);
+            if !self.movable(p) {
+                continue;
+            }
+            // TODO 見えるかどうかのチェック
+            self[p.y as usize][p.x as usize] = Square::WrappedSurface;
+        }
+        return booster;
     }
 
 
