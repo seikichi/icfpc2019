@@ -23,11 +23,11 @@ async function upload(key, solutionPath) {
 
   const current = await utils.check(taskPath, solutionPath);
   if (!current.success) {
-    console.error('invalid task or solution');
+    console.error(`Invalid task or solution ${problemId}, ${taskPath}, ${solutionPath}`);
     process.exit(-1);
   }
 
-  const key = `solutions/problems/prob-${problemId}.desc`;
+  const key = `solutions/problems/prob-${problemId}.sol`;
   try {
     await s3.headObject({ Key: key }).promise();
   } catch (error) {
@@ -49,7 +49,7 @@ async function upload(key, solutionPath) {
     process.exit(-1);
   }
 
-  if (current.timeunits < prev.timeunits) { // TODO: <= -> <
+  if (current.timeunits < prev.timeunits) {
     console.log(`The given solution (${current.timeunits}) seems better than old one (${prev.timeunits}), upload it ... (key = ${key})`);
     upload(key, solutionPath);
   }
