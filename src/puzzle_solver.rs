@@ -242,18 +242,27 @@ impl PuzzleSolver {
                 continue;
             }
             for x in 0..self.field.width() {
-                if x != 0 && x != self.field.width() - 1 {
-                    continue;
-                }
                 if visited[y][x] || self.field[y][x] != Square::Obstacle {
                     continue;
                 }
                 self.bfs(Point::new(x as i32, y as i32), &mut visited);
             }
         }
+        for x in 0..self.field.width() {
+            if x != 0 && x != self.field.width() - 1 {
+                continue;
+            }
+            for y in 0..self.field.height() {
+                if visited[y][x] || self.field[y][x] != Square::Obstacle {
+                    continue;
+                }
+                self.bfs(Point::new(x as i32, y as i32), &mut visited);
+            }
+        }
+
         for y in 0..self.field.height() {
             for x in 0..self.field.width() {
-                if visited[y][x] {
+                if visited[y][x] || self.field[y][x] != Square::Obstacle {
                     continue;
                 }
                 let obstacle = self.get_area(Point::new(x as i32, y as i32), Square::Obstacle);
