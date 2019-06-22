@@ -10,6 +10,20 @@ AWS と通信するコマンドの場合は追加で以下のいずれかの設�
 - 環境変数 `AWS_ACCESS_KEY_ID` および `AWS_SECRET_ACCESS_KEY` の設定
 - 共有認証情報ファイルの作成 (`~/.aws/credentials`) および必要に応じて環境変数 `AWS_PROFILE` の設定
 
+その他:
+
+- Q. なぜ JavaScript なのですか？
+- A. https://github.com/GoogleChrome/puppeteer
+
+## submit.sh
+
+現在の解答を提出します:
+
+```sh
+> export ICFPC2019_PRIVATE_ID=...
+> ./tools/submit.sh
+```
+
 ## upload.js
 
 解答が正しいかどうかを検証し、過去のスコアより良い成績だった場合に S3 にアップロードします。
