@@ -70,7 +70,9 @@ impl Worker {
                 self.drill_time = 30;
             }
             Action::Cloning => {
-                let mystery_point = Square::Booster{ code: BoosterCode::MysteriousPoint };
+                let mystery_point = Square::Booster {
+                    code: BoosterCode::MysteriousPoint,
+                };
                 if field[self.p.y as usize][self.p.x as usize] != mystery_point {
                     panic!("Here is not Mysterious Point");
                 }
@@ -117,16 +119,19 @@ pub enum Square {
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
-pub struct Field(pub Vec<Vec<Square>>);
+pub struct Field {
+    pub field: Vec<Vec<Square>>,
+    pub booster_field: Vec<Vec<Square>>,
+    pub rest_booster_cnts: Vec<usize>,
+    pub rest_surface_cnt: usize,
+}
 
 impl Field {
     pub fn height(&self) -> usize {
-        let Field(f) = self;
-        return f.len();
+        return self.field.len();
     }
     pub fn width(&self) -> usize {
-        let Field(f) = self;
-        return f[0].len();
+        return self.field[0].len();
     }
     pub fn in_map(&self, p: Point) -> bool {
         return 0 <= p.x && p.x < self.width() as i32 && 0 <= p.y && p.y < self.height() as i32;
@@ -139,24 +144,34 @@ impl Field {
             panic!("can't move this postion");
         }
         // get booster
-        let booster = match self[worker.p.y as usize][worker.p.x as usize] {
+        let booster = match self.booster_field[worker.p.y as usize][worker.p.x as usize] {
             Square::Booster { code } if code == BoosterCode::MysteriousPoint => {}
             Square::Booster { code } => {
+                self.rest_booster_cnts[code as usize] -= 1;
                 booster_cnts[code as usize] += 1;
             }
             _ => {}
         };
         // update wrapped surface
-        self[worker.p.y as usize][worker.p.x as usize] = Square::WrappedSurface;
+        self.wrap(worker.p);
         for &p in worker.manipulators.iter() {
             let p = p.rotate(worker.cw_rotation_count);
             if !self.movable(p) {
                 continue;
             }
             // TODO 見えるかどうかのチェック
-            self[p.y as usize][p.x as usize] = Square::WrappedSurface;
+            self.wrap(p);
         }
         return booster;
+    }
+    pub fn wrap(&mut self, p: Point) {
+        if self[p.y as usize][p.x as usize] == Square::Surface {
+            self.rest_surface_cnt -= 1;
+        }
+        self[p.y as usize][p.x as usize] = Square::WrappedSurface;
+    }
+    pub fn finished(&self) -> bool {
+        self.rest_surface_cnt == 0
     }
 
 
@@ -229,6 +244,7 @@ impl Field {
         // Find Surfaces with bfs from start point
         let w = field[0].len();
         let h = field.len();
+        let mut rest_surface_cnt = 0;
 
         let mut queue = std::collections::VecDeque::new();
         queue.push_back(task.point.clone());
@@ -240,6 +256,7 @@ impl Field {
                 continue;
             }
             field[y][x] = Square::Surface;
+            rest_surface_cnt += 1;
 
             let ns = [
                 (p.y - 1, p.x),
@@ -259,12 +276,13 @@ impl Field {
         }
 
         // fill boosters
+        let mut booster_field = vec![vec![Square::Unknown; w]; h];
+        let mut rest_booster_cnts = vec![0; 10];
         for b in &task.boosters {
             let y = b.point.y as usize;
             let x = b.point.x as usize;
-            field[y][x] = Square::Booster {
-                code: b.code.clone(),
-            };
+            booster_field[y][x] = Square::Booster { code: b.code };
+            rest_booster_cnts[b.code as usize] += 1;
         }
 
         // Mark cells as obstacles if not marked yet
@@ -275,7 +293,12 @@ impl Field {
                 }
             }
         }
-        Field(field)
+        Field {
+            field,
+            booster_field,
+            rest_booster_cnts,
+            rest_surface_cnt,
+        }
     }
 }
 
@@ -285,15 +308,13 @@ impl std::ops::Index<usize> for Field {
     type Output = Vec<Square>;
     #[inline]
     fn index(&self, rhs: usize) -> &Vec<Square> {
-        let Field(f) = self;
-        &f[rhs]
+        &self.field[rhs]
     }
 }
 impl std::ops::IndexMut<usize> for Field {
     #[inline]
     fn index_mut(&mut self, rhs: usize) -> &mut Vec<Square> {
-        let Field(f) = self;
-        &mut f[rhs]
+        &mut self.field[rhs]
     }
 }
 
@@ -328,29 +349,62 @@ fn test_field_from() {
     };
 
     let field = Field::from(&task);
-    let expected = Field(vec![
+    let expected_field = vec![
         vec![
             Square::Surface,
+            Square::Surface,
+            Square::Surface,
+            Square::Surface,
+        ],
+        vec![
+            Square::Surface,
+            Square::Obstacle,
+            Square::Obstacle,
+            Square::Surface,
+        ],
+        vec![
+            Square::Surface,
+            Square::Surface,
+            Square::Surface,
+            Square::Surface,
+        ],
+    ];
+
+    let expected_booster_field = vec![
+        vec![
+            Square::Unknown,
             Square::Booster {
                 code: BoosterCode::FastWheels,
             },
-            Square::Surface,
-            Square::Surface,
+            Square::Unknown,
+            Square::Unknown,
         ],
         vec![
-            Square::Surface,
+            Square::Unknown,
             Square::Obstacle,
             Square::Obstacle,
-            Square::Surface,
+            Square::Unknown,
         ],
         vec![
-            Square::Surface,
+            Square::Unknown,
             Square::Booster {
                 code: BoosterCode::MysteriousPoint,
             },
-            Square::Surface,
-            Square::Surface,
+            Square::Unknown,
+            Square::Unknown,
         ],
-    ]);
-    assert_eq!(field, expected);
+    ];
+
+    assert_eq!(field.field, expected_field);
+    assert_eq!(field.booster_field, expected_booster_field);
+    assert_eq!(
+        field.rest_booster_cnts[BoosterCode::ExtensionOfTheManipulator as usize],
+        0
+    );
+    assert_eq!(field.rest_booster_cnts[BoosterCode::FastWheels as usize], 1);
+    assert_eq!(
+        field.rest_booster_cnts[BoosterCode::MysteriousPoint as usize],
+        1
+    );
+    assert_eq!(field.rest_surface_cnt, 10);
 }
