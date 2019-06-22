@@ -1,6 +1,8 @@
 use crate::solution::*;
 use crate::task::*;
 use crate::union_find::*;
+
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Worker {
     pub p: Point,
     pub manipulators: Vec<Point>,
@@ -170,7 +172,7 @@ impl Field {
         }
         self[p.y as usize][p.x as usize] = Square::WrappedSurface;
     }
-    pub fn finished(&self) -> bool {
+    pub fn is_finished(&self) -> bool {
         self.rest_surface_cnt == 0
     }
 
