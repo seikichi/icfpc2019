@@ -17,5 +17,9 @@ name = "main"
 path = "src/main.rs"
 
 [[bin]]
+name = "main_cloning"
+path = "src/main_cloning.rs"
+
+[[bin]]
 name = "visualize"
 path = "src/visualize.rs"

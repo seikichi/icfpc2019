@@ -49,10 +49,10 @@ impl Worker {
                 self.movement(Point::new(0, -1), field, booster_cnts);
             }
             Action::MoveLeft => {
-                self.movement(Point::new(1, 0), field, booster_cnts);
+                self.movement(Point::new(-1, 0), field, booster_cnts);
             }
             Action::MoveRight => {
-                self.movement(Point::new(-1, 0), field, booster_cnts);
+                self.movement(Point::new(1, 0), field, booster_cnts);
             }
             Action::DoNothing => {
                 field.update_surface(self, booster_cnts);
@@ -75,11 +75,11 @@ impl Worker {
                 let mystery_point = Square::Booster {
                     code: BoosterCode::MysteriousPoint,
                 };
-                if field[self.p.y as usize][self.p.x as usize] != mystery_point {
+                if field.booster_field[self.p.y as usize][self.p.x as usize] != mystery_point {
                     panic!("Here is not Mysterious Point");
                 }
                 booster_cnts[BoosterCode::Cloning as usize] -= 1;
-                unimplemented!();
+                // Workerを増やす処理は呼び出し側がする事
             }
             Action::TurnCW => {
                 self.cw_rotation_count = (self.cw_rotation_count + 1) % 4;
@@ -150,6 +150,7 @@ impl Field {
             Square::Booster { code } if code == BoosterCode::MysteriousPoint => {}
             Square::Booster { code } => {
                 self.rest_booster_cnts[code as usize] -= 1;
+                self.booster_field[worker.p.y as usize][worker.p.x as usize] = Square::Unknown;
                 booster_cnts[code as usize] += 1;
             }
             _ => {}
@@ -383,8 +384,8 @@ fn test_field_from() {
         ],
         vec![
             Square::Unknown,
-            Square::Obstacle,
-            Square::Obstacle,
+            Square::Unknown,
+            Square::Unknown,
             Square::Unknown,
         ],
         vec![
