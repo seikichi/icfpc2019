@@ -38,7 +38,6 @@ impl Worker {
             field.update_surface(self, booster_cnts);
         }
     }
-    // TODO boosterの所持個数一覧を&mutで貰ってチェック・更新する
     pub fn act(&mut self, action: Action, field: &mut Field, booster_cnts: &mut Vec<usize>) {
         match action {
             Action::MoveUp => {
@@ -137,11 +136,11 @@ impl Field {
         }
         // get booster
         let booster = match self[worker.p.y as usize][worker.p.x as usize] {
-            Square::Booster { code } if code == BoosterCode::MysteriousPoint => {},
+            Square::Booster { code } if code == BoosterCode::MysteriousPoint => {}
             Square::Booster { code } => {
                 booster_cnts[code as usize] += 1;
-            },
-            _ => {},
+            }
+            _ => {}
         };
         // update wrapped surface
         self[worker.p.y as usize][worker.p.x as usize] = Square::WrappedSurface;
