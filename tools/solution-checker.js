@@ -7,7 +7,7 @@ const utils = require('./utils');
   }
   const taskPath = process.argv[2];
   const solutionPath = process.argv[3];
-  const result = await utils.check(taskPath, solutionPath);
+  const result = await utils.checkSolution(taskPath, solutionPath);
   console.log(JSON.stringify(result));
 
   if (!result.success) {

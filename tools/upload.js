@@ -21,7 +21,7 @@ async function upload(key, solutionPath) {
   const taskPath = process.argv[3];
   const solutionPath = process.argv[4];
 
-  const current = await utils.check(taskPath, solutionPath);
+  const current = await utils.checkSolution(taskPath, solutionPath);
   if (!current.success) {
     console.error(`Invalid task or solution ${problemId}, ${taskPath}, ${solutionPath}`);
     process.exit(-1);
