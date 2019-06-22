@@ -16,16 +16,28 @@ impl PuzzleSolver {
         let max_x = puzzle.max_x() as usize;
         let max_y = puzzle.max_y() as usize;
         let mut field = Field {
-            field: vec![vec![Square::Unknown; max_x + 100]; max_y + 100],
-            booster_field: vec![vec![Square::Unknown; max_x + 100]; max_y + 100],
+            field: vec![vec![Square::Unknown; puzzle.xy_max()]; puzzle.xy_max()],
+            booster_field: vec![vec![Square::Unknown; puzzle.xy_max()]; puzzle.xy_max()],
             rest_booster_cnts: vec![0; 10],
             rest_surface_cnt: 1 << 30,
         };
+        for &p in puzzle.o_seq.iter() {
+            field[p.y as usize][p.x as usize] = Square::Obstacle;
+        }
         for &p in puzzle.i_seq.iter() {
             field[p.y as usize][p.x as usize] = Square::Surface;
         }
         for &p in puzzle.o_seq.iter() {
-            field[p.y as usize][p.x as usize] = Square::Obstacle;
+            for dy in -1..2 {
+                for dx in -1..2 {
+                    let ny = p.y + dy;
+                    let nx = p.x + dx;
+                    if !field.in_map(Point::new(ny, nx)) || field[ny as usize][nx as usize] == Square::Obstacle {
+                        continue;
+                    }
+                    field[ny as usize][nx as usize] = Square::Surface;
+                }
+            }
         }
         // let current = vec![vec![Square::Unknown; field.width()]; field.height()];
         PuzzleSolver {
@@ -39,19 +51,23 @@ impl PuzzleSolver {
     pub fn solve(&mut self) {
         let start_pos = self.puzzle.i_seq[0];
         self.field[start_pos.y as usize][start_pos.x as usize] = Square::WrappedSurface;
-        for i in 1..self.puzzle.i_seq.len() {
+        loop {
             let mut worker = Worker::new(start_pos);
             worker.manipulators = vec![];
-            let (_end_pos, actions) = self.field.bfs(&worker, Square::Surface, &vec![]).unwrap();
+            if let Some((_end_pos, actions)) = self.field.bfs(&worker, Square::Surface, &vec![]) {
             for &action in actions.iter() {
                 worker.act(action, &mut self.field, &mut vec![0; 10]);
             }
+        } else {
+            break;
+        }
         }
         let mut rng = rand::thread_rng();
         let initial_field = self.field.clone();
         loop {
             let need_vertex = self.puzzle.v_min as i32 - self.count_vertex() as i32;
-            let need_area = self.puzzle.area_min() as i32 - self.count_area() as i32;
+            // let need_area = self.puzzle.area_min() as i32 - self.count_area() as i32;
+            let need_area = 0;
             if need_vertex <= 0 && need_area <= 0 {
                 break;
             }
@@ -59,9 +75,9 @@ impl PuzzleSolver {
             let mut pos = self.get_left_bottom_position();
             let mut vertexs = vec![pos];
             let mut dir = 0;
-            let cnt = need_vertex + 20;
+            let cnt = need_vertex / 2 + 1;
             for _iter in 0..cnt {
-                let move_cnt = rng.gen::<usize>() % 10 + 3;
+                let move_cnt = rng.gen::<usize>() % 30 + 3;
                 for _iter2 in 0..move_cnt {
                     self.one_move(&mut pos, &mut dir, &mut vertexs, &mut first);
                 }
@@ -165,6 +181,19 @@ impl PuzzleSolver {
         return ret;
     }
 
+    pub fn max_xy(&self) -> usize {
+        let mut ret = 0;
+        for y in 0..self.field.height() {
+            for x in 0..self.field.width() {
+                if self.field[y][x] == Square::WrappedSurface {
+                    ret = std::cmp::max(ret, x);
+                    ret = std::cmp::max(ret, y);
+                }
+            }
+        }
+        ret
+    }
+
     pub fn get_map(&self) -> Map {
         let mut pos = self.get_left_bottom_position();
         let mut vertexs = vec![pos];
@@ -266,6 +295,8 @@ fn test_puzzle_example_solve() {
     solver.field.print(0, 0, 150, 150);
     println!("vertex: {}", solver.count_vertex());
     println!("{} < vertex < {}", puzzle.v_min, puzzle.v_max);
+    println!("max_xy: {}", solver.max_xy());
+    println!("{} < max_xy < {}", puzzle.xy_min(), puzzle.xy_max());
     println!("area: {}", solver.count_area());
-    println!("{} < area < {}", puzzle.area_min(), puzzle.area_max());
+    println!("{} < area", puzzle.area_min());
 }

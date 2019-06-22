@@ -47,10 +47,13 @@ impl Puzzle {
             o_seq,
         }
     }
-    pub fn area_min(&self) -> usize {
+    pub fn xy_max(&self) -> usize {
+        self.t_size
+    }
+    pub fn xy_min(&self) -> usize {
         self.t_size - self.t_size / 10
     }
-    pub fn area_max(&self) -> usize {
+    pub fn area_min(&self) -> usize {
         self.t_size * self.t_size / 5
     }
     pub fn max_x(&self) -> i32 {
