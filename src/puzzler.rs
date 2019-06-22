@@ -13,10 +13,11 @@ fn main() -> io::Result<()> {
     let puzzle = Puzzle::from(&buffer);
     let mut solver = PuzzleSolver::new(&puzzle);
     solver.solve();
+    let obstacles = solver.get_obstacles();
     let task = Task {
         map: solver.get_map(),
         point: solver.start_point,
-        obstacles: vec![],
+        obstacles: obstacles,
         boosters: solver.boosters,
     };
     println!("{}", task.to_string());
