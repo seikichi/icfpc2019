@@ -304,6 +304,9 @@ impl PuzzleSolver {
                 if !self.field.in_map(npos) {
                     continue;
                 }
+                if self.field[npos.y as usize][npos.x as usize] != Square::Obstacle {
+                    continue;
+                }
                 if visited[npos.y as usize][npos.x as usize] {
                     continue;
                 }
