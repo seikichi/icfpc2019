@@ -50,6 +50,35 @@ impl PuzzleSolver {
                 break 'outer_loop;
             }
         }
+
+        // *.. => **.
+        // .*.    .*.
+        for y in 0..field.height() {
+            for x in 0..field.width() {
+                if field[y][x] != Square::Obstacle {
+                    continue;
+                }
+                let dx = [-1, 1];
+                let dy = [1, 1];
+                for d in 0..2 {
+                    let corner = Point::new((x as i32) + dx[d], (y as i32) + dy[d]);
+                    let side = Point::new((x as i32) + dx[d], (y as i32));
+
+                    if !field.in_map(corner) {
+                        continue;
+                    }
+                    if field[corner.y as usize][corner.x as usize] == Square::Obstacle
+                        && field[side.y as usize][side.x as usize] != Square::Obstacle
+                    {
+                        if field[side.y as usize][x] == Square::Surface {
+                            panic!("Failed to fix obstacle intersect");
+                        }
+                        field[side.y as usize][x] = Square::Obstacle;
+                    }
+                }
+            }
+        }
+
         // let current = vec![vec![Square::Unknown; field.width()]; field.height()];
         PuzzleSolver {
             puzzle: puzzle.clone(),
