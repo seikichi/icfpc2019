@@ -1,6 +1,6 @@
+use crate::field::*;
 use crate::solution::*;
 use crate::task::*;
-use crate::field::*;
 use crate::wrapper::Wrapper;
 
 pub struct DfsWrapper {}
@@ -9,7 +9,7 @@ impl Wrapper for DfsWrapper {
     fn wrap(&mut self, task: &Task) -> Solution {
         let mut solution = vec![];
         let mut field = Field::from(task);
-        let mut current = task.point.clone();
+        let mut current = task.point;
         while let Some(s) = self.dfs(&mut current, &mut field) {
             let Field(field) = &mut field;
             field[current.y as usize][current.x as usize] = Square::WrappedSurface;
@@ -26,7 +26,7 @@ impl DfsWrapper {
         let h = field.len();
 
         let mut queue = std::collections::VecDeque::new();
-        queue.push_back((current.clone(), 0));
+        queue.push_back((*current, 0));
 
         let mut visited = vec![vec![-1; w]; h];
 
@@ -59,7 +59,7 @@ impl DfsWrapper {
                             }
                             let ncost = visited[*ny as usize][*nx as usize];
                             if cost == ncost + 1 {
-                                actions.push(a.clone());
+                                actions.push(*a);
                                 y = *ny;
                                 x = *nx;
                                 break;
