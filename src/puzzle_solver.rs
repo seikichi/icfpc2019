@@ -358,6 +358,7 @@ impl PuzzleSolver {
                         *pos + Point::new(1, 0),
                         *pos + Point::new(1, 1),
                         *pos + Point::new(0, 1),
+                        *pos,
                     ];
                     return true;
                 }
@@ -386,9 +387,9 @@ fn test_puzzle_solve() {
     let puzzle = Puzzle {
         b_num: 0,
         e_num: 0,
-        t_size: 20,
+        t_size: 8,
 
-        v_min: 130,
+        v_min: 1,
         v_max: 300,
         booster_num: vec![0; 6],
 
