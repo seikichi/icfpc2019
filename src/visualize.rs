@@ -49,15 +49,6 @@ fn draw_text(x: f32, y: f32, size: i32, text: &str) {
     println!(r#"<text x="{}" y="{}" font-size="{}">{}</text>"#, x, y, size, text);
 }
 
-fn _draw_obstacles(task: &Task) {
-    for obstacle in &task.obstacles {
-        let map = &obstacle.0;
-        for point in map {
-            draw_cell(point.x, point.y, "#666");
-        }
-    }
-}
-
 fn draw_boosters(task: &Task) {
     for booster in &task.boosters {
         let point = &booster.point;
@@ -92,7 +83,6 @@ fn visualize(s: &str) {
 
     set_canvas(dot_per_unit, &bounds);
     draw_bounding_rect(&bounds);
-    //draw_obstacles(&task);
     draw_obstacles(&field);
     draw_boosters(&task);
 

@@ -156,6 +156,9 @@ impl Point {
             _ => panic!("unknown value"),
         };
     }
+    pub fn manhattan_dist(self) -> i32 {
+        self.x + self.y
+    }
 }
 impl std::ops::Add<Point> for Point {
     type Output = Point;
