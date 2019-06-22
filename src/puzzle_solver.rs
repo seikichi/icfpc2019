@@ -43,7 +43,9 @@ impl PuzzleSolver {
         }
         'outer_loop: for y in (0..field.height()).rev() {
             for x in (0..field.width()).rev() {
-                if field[y][x] == Square::Obstacle { continue; }
+                if field[y][x] == Square::Obstacle {
+                    continue;
+                }
                 field[y][x] = Square::Surface;
                 break 'outer_loop;
             }
@@ -60,25 +62,36 @@ impl PuzzleSolver {
     pub fn solve(&mut self) {
         let start_pos = self.puzzle.i_seq[0];
         self.field[start_pos.y as usize][start_pos.x as usize] = Square::WrappedSurface;
+        let mut rng = rand::thread_rng();
         loop {
-            let mut worker = Worker::new(start_pos);
-            worker.manipulators = vec![];
-            if let Some((_end_pos, actions)) = self.field.bfs(&worker, Square::Surface, &vec![]) {
-                for &action in actions.iter() {
-                    worker.act(action, &mut self.field, &mut vec![0; 10]);
+            loop {
+                let mut worker = Worker::new(start_pos);
+                worker.manipulators = vec![];
+                if let Some((_end_pos, actions)) = self.field.bfs(&worker, Square::Surface, &vec![])
+                {
+                    for &action in actions.iter() {
+                        worker.act(action, &mut self.field, &mut vec![0; 10]);
+                    }
+                } else {
+                    break;
                 }
-            } else {
+            }
+            let need_area = self.puzzle.area_min() as i32 - self.count_area() as i32;
+            if need_area <= 0 {
                 break;
             }
-
+            for i in 0..5 {
+                let y = rng.gen::<usize>() % self.field.height();
+                let x = rng.gen::<usize>() % self.field.width();
+                if self.field[y][x] == Square::Unknown {
+                    self.field[y][x] = Square::Surface;
+                }
+            }
         }
-        let mut rng = rand::thread_rng();
-        let initial_field = self.field.clone();
+        // let initial_field = self.field.clone();
         loop {
             let need_vertex = self.puzzle.v_min as i32 - self.count_vertex() as i32;
-            // let need_area = self.puzzle.area_min() as i32 - self.count_area() as i32;
-            let need_area = 0;
-            if need_vertex <= 0 && need_area <= 0 {
+            if need_vertex <= 0 {
                 break;
             }
             let mut first = true;
