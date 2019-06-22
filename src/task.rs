@@ -15,6 +15,8 @@ pub enum BoosterCode {
     FastWheels,
     Drill,
     MysteriousPoint,
+    Teleport,
+    Cloning,
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
@@ -39,16 +41,14 @@ impl Map {
         let mut points = vec![];
         let s = s.chars().collect::<Vec<char>>();
 
-        let mut start = 0;
-        let mut end = 0;
-        while end < s.len() {
-            if s[end] == ')' {
-                let p = s[start..end + 1].iter().collect::<String>();
-                points.push(Point::from(&p));
-                end += 2;
-                start = end;
+        let mut pos = 0;
+        while pos < s.len() {
+            if s[pos] == '(' {
+                let (p, end) = Point::read(&s, pos);
+                points.push(p);
+                pos = end;
             } else {
-                end += 1;
+                pos += 1;
             }
         }
         Map(points)
@@ -89,6 +89,8 @@ impl BoosterCode {
             "F" => BoosterCode::FastWheels,
             "L" => BoosterCode::Drill,
             "X" => BoosterCode::MysteriousPoint,
+            "R" => BoosterCode::Teleport,
+            "C" => BoosterCode::Cloning,
             _ => panic!("failed to parse BoosterCode"),
         }
     }
@@ -99,6 +101,8 @@ impl BoosterCode {
             BoosterCode::FastWheels => "F",
             BoosterCode::Drill => "L",
             BoosterCode::MysteriousPoint => "X",
+            BoosterCode::Teleport => "R",
+            BoosterCode::Cloning => "C",
         }
     }
 }
@@ -121,6 +125,16 @@ impl Point {
         let x = s[0].parse::<i32>().expect("failed to parse x");
         let y = s[1].parse::<i32>().expect("failed to parse y");
         Self { x, y }
+    }
+    // startからPointを読み込んで、Pointと読み込み後の)の位置を返す
+    pub fn read(s: &Vec<char>, start: usize) -> (Self, usize) {
+        let mut end = start;
+        while s[end] != ')' {
+            end += 1;
+        }
+        let p = s[start..end + 1].iter().collect::<String>();
+        let p = Point::from(&p);
+        (p, end)
     }
 
     pub fn new(x: i32, y: i32) -> Self {
