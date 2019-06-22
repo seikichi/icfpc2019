@@ -61,9 +61,14 @@ impl Task {
         let (map, point, obstacles, boosters) = (s[0], s[1], s[2], s[3]);
         let map = Map::from(map);
         let point = Point::from(point);
-        let obstacles = obstacles.split(";").map(|o| Map::from(o)).collect();
+        let obstacles = obstacles
+            .split(";")
+            .filter(|b| !b.is_empty())
+            .map(|o| Map::from(o))
+            .collect();
         let boosters = boosters
             .split(';')
+            .filter(|b| !b.is_empty())
             .map(|b| BoosterLocation::from(b))
             .collect();
         Self {
