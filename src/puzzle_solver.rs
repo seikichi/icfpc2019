@@ -239,7 +239,25 @@ pub fn get_obstacle(&mut self) -> Vec<Map> {
     }
 
     fn bfs(&self, p: Point, visited: &mut Vec<Vec<bool>>) {
-        // TODO
+        let mut que = std::collections::VecDeque::new();
+        que.push_back(p);
+
+        while let Some(cur) = que.pop_back() {
+            visited[cur.y as usize][cur.x as usize] = true;
+
+            let dx = [1, 0, -1, 0];
+            let dy = [0, 1, 0, -1];
+            for d in 0..4 {
+                let npos = cur + Point::new(dx[d], dy[d]);
+                if !self.field.in_map(npos) {
+                    continue;
+                }
+                if visited[npos.y as usize][npos.x as usize] {
+                    continue;
+                }
+                que.push_back(npos);
+            }
+        }
     }
 
     fn one_move(
