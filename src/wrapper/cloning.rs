@@ -47,9 +47,10 @@ pub struct CloningWrapper {
 
 impl Wrapper for CloningWrapper {
     fn new(task: &Task) -> Self {
-        let workers = vec![Worker::new(task.point)];
-        let field = Field::from(task);
-        let booster_cnts = vec![0; 10];
+        let mut workers = vec![Worker::new(task.point)];
+        let mut field = Field::from(task);
+        let mut booster_cnts = vec![0; 10];
+        field.update_surface(&mut workers[0], &mut booster_cnts);
         CloningWrapper {
             workers,
             booster_cnts,
