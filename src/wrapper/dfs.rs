@@ -10,9 +10,24 @@ impl Wrapper for DfsWrapper {
         let mut solution = vec![];
         let mut field = Field::from(task);
         let mut current = task.point;
+        let manipulators = vec![Point::new(1, -1), Point::new(1, 0), Point::new(1, 1)];
         while let Some(s) = self.dfs(&mut current, &mut field) {
             let Field(field) = &mut field;
+            let w = field[0].len();
+            let h = field.len();
             field[current.y as usize][current.x as usize] = Square::WrappedSurface;
+            for &p in manipulators.iter() {
+                let np = current + p;
+                if np.x < 0
+                    || np.y < 0
+                    || np.x >= w as i32
+                    || np.y >= h as i32
+                    || field[np.y as usize][np.x as usize] == Square::Obstacle
+                {
+                    continue;
+                }
+                field[np.y as usize][np.x as usize] = Square::WrappedSurface
+            }
             solution.extend(s);
         }
         Solution(vec![solution])
