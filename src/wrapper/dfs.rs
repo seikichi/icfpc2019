@@ -12,16 +12,13 @@ impl Wrapper for DfsWrapper {
         let mut current = task.point;
         let manipulators = vec![Point::new(1, -1), Point::new(1, 0), Point::new(1, 1)];
         while let Some(s) = self.dfs(&mut current, &mut field) {
-            let Field(field) = &mut field;
-            let w = field[0].len();
-            let h = field.len();
             field[current.y as usize][current.x as usize] = Square::WrappedSurface;
             for &p in manipulators.iter() {
                 let np = current + p;
                 if np.x < 0
                     || np.y < 0
-                    || np.x >= w as i32
-                    || np.y >= h as i32
+                    || np.x >= field.width()
+                    || np.y >= field.height()
                     || field[np.y as usize][np.x as usize] == Square::Obstacle
                 {
                     continue;
@@ -36,14 +33,13 @@ impl Wrapper for DfsWrapper {
 
 impl DfsWrapper {
     fn dfs(&mut self, current: &mut Point, field: &mut Field) -> Option<Vec<Action>> {
-        let Field(field) = field;
-        let w = field[0].len();
-        let h = field.len();
+        let w = field.width();
+        let h = field.height();
 
         let mut queue = std::collections::VecDeque::new();
         queue.push_back((*current, 0));
 
-        let mut visited = vec![vec![-1; w]; h];
+        let mut visited = vec![vec![-1; w as usize]; h as usize];
 
         while let Some((p, cost)) = queue.pop_front() {
             let y = p.y as usize;

@@ -13,6 +13,14 @@ pub enum Square {
 pub struct Field(pub Vec<Vec<Square>>);
 
 impl Field {
+    pub fn height(&self) -> i32 {
+        let Field(f) = self;
+        return f.len() as i32;
+    }
+    pub fn width(&self) -> i32 {
+        let Field(f) = self;
+        return f[0].len() as i32;
+    }
     pub fn from(task: &Task) -> Self {
         let Map(map) = &task.map;
         let x = map.iter().map(|p| p.x).max().unwrap() as usize;
@@ -93,7 +101,7 @@ impl Field {
                 continue;
             }
             field[y][x] = Square::Surface;
-            
+
             let ns = [
                 (p.y - 1, p.x),
                 (p.y + 1, p.x),
@@ -129,6 +137,24 @@ impl Field {
             }
         }
         Field(field)
+    }
+}
+
+// field[y][x] = Square::WrappedSurface とかできる
+// []operator
+impl std::ops::Index<usize> for Field {
+    type Output = Vec<Square>;
+    #[inline]
+    fn index(&self, rhs: usize) -> &Vec<Square> {
+        let Field(f) = self;
+        &f[rhs]
+    }
+}
+impl std::ops::IndexMut<usize> for Field {
+    #[inline]
+    fn index_mut(&mut self, rhs: usize) -> &mut Vec<Square> {
+        let Field(f) = self;
+        &mut f[rhs]
     }
 }
 
