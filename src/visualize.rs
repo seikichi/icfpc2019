@@ -1,4 +1,5 @@
 use lib::task::{Task, Point};
+use lib::field::{Field, Square};
 use std::cmp::{min,max};
 use std::io::{self, Read};
 
@@ -48,7 +49,7 @@ fn draw_text(x: f32, y: f32, size: i32, text: &str) {
     println!(r#"<text x="{}" y="{}" font-size="{}">{}</text>"#, x, y, size, text);
 }
 
-fn draw_obstacles(task: &Task) {
+fn _draw_obstacles(task: &Task) {
     for obstacle in &task.obstacles {
         let map = &obstacle.0;
         for point in map {
@@ -66,8 +67,20 @@ fn draw_boosters(task: &Task) {
     }
 }
 
+fn draw_obstacles(field: &Field) {
+    let Field(field) = field;
+    for y in 0..field.len() {
+        for x in 0..field[0].len() {
+            if field[y][x] == Square::Obstacle {
+                draw_cell(x as i32, y as i32, "#666");
+            }
+        }
+    }
+}
+
 fn visualize(s: &str) {
     let task = Task::from(s);
+    let field = Field::from(&task);
 
     let bounds = get_bounds(&task);
 
@@ -79,7 +92,8 @@ fn visualize(s: &str) {
 
     set_canvas(dot_per_unit, &bounds);
     draw_bounding_rect(&bounds);
-    draw_obstacles(&task);
+    //draw_obstacles(&task);
+    draw_obstacles(&field);
     draw_boosters(&task);
 
     println!(r#"</g>"#);
