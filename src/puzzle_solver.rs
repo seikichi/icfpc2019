@@ -94,38 +94,39 @@ impl PuzzleSolver {
             let start_pos = self.puzzle.i_seq[r];
             let mut candidate_poss = vec![start_pos];
             self.field[start_pos.y as usize][start_pos.x as usize] = Square::WrappedSurface;
+            // loop {
             loop {
-                loop {
-                    let r = rng.gen::<usize>() % candidate_poss.len();
-                    let pos = candidate_poss[r];
-                    let mut worker = Worker::new(pos);
-                    worker.manipulators = vec![];
-                    if let Some((_end_pos, actions)) = self.field.dijkstra(&worker, Square::Surface)
-                    {
-                        for &action in actions.iter() {
-                            worker.act(action, &mut self.field, &mut vec![0; 10]);
-                            candidate_poss.push(worker.p);
-                        }
-                    } else {
-                        break;
+                let r = rng.gen::<usize>() % candidate_poss.len();
+                let pos = candidate_poss[r];
+                let mut worker = Worker::new(pos);
+                worker.manipulators = vec![];
+                if let Some((_end_pos, actions)) = self.field.dijkstra(&worker, Square::Surface) {
+                    for &action in actions.iter() {
+                        worker.act(action, &mut self.field, &mut vec![0; 10]);
+                        candidate_poss.push(worker.p);
                     }
-                }
-                break;
-                // TODO
-                let need_area = self.puzzle.area_min() as i32 - self.count_area() as i32;
-                if need_area <= 0 {
+                } else {
                     break;
                 }
-                loop {
-                    let y = rng.gen::<usize>() % self.field.height();
-                    let x = rng.gen::<usize>() % self.field.width();
-                    if self.field[y][x] == Square::Unknown {
-                        self.field[y][x] = Square::Surface;
-                        break;
-                    }
-                }
             }
+            // break;
+            // let need_area = self.puzzle.area_min() as i32 - self.count_area() as i32;
+            // if need_area <= 0 {
+            //     break;
+            // }
+            // for _i in 0..10 {
+            //     let y = rng.gen::<usize>() % self.field.height();
+            //     let x = rng.gen::<usize>() % self.field.width();
+            //     if self.field[y][x] == Square::Unknown {
+            //         self.field[y][x] = Square::Surface;
+            //     }
+            // }
+            // }
+            self.fill_random_area();
+
             break;
+            // TODO check visitable all obstacle
+
             // x
         }
         // let initial_field = self.field.clone();
@@ -231,6 +232,34 @@ impl PuzzleSolver {
             }
         }
         return true;
+    }
+
+    pub fn fill_random_area(&mut self) {
+        let mut rng = rand::thread_rng();
+        let mut need_area = self.puzzle.area_min() as i32 - self.count_area() as i32;
+        'outer_loop: while need_area > 0 {
+            let s = rng.gen::<usize>() % 8 + 8;
+            let sx = rng.gen::<usize>() % (self.field.width() - s);
+            let sy = rng.gen::<usize>() % (self.field.height() - s);
+            let mut cnt = 0;
+            for y in sy..sy + s {
+                for x in sx..sx + s {
+                    if self.field[y][x] == Square::Obstacle {
+                        continue 'outer_loop;
+                    } else if self.field[y][x] == Square::WrappedSurface {
+                        cnt += 1;
+                    }
+                }
+            }
+            if cnt == 0 { continue; }
+            for y in sy..sy + s {
+                for x in sx..sx + s {
+                    self.field[y][x] = Square::WrappedSurface;
+                }
+            }
+            need_area -= cnt;
+        }
+        // TODO
     }
 
     pub fn get_left_bottom_position(&self) -> Point {
