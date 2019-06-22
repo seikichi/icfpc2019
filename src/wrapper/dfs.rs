@@ -1,6 +1,6 @@
+use crate::field::*;
 use crate::solution::*;
 use crate::task::*;
-use crate::field::*;
 use crate::wrapper::Wrapper;
 
 pub struct DfsWrapper {}
@@ -9,7 +9,7 @@ impl Wrapper for DfsWrapper {
     fn wrap(&mut self, task: &Task) -> Solution {
         let mut solution = vec![];
         let mut field = Field::from(task);
-        let mut current = task.point.clone();
+        let mut current = task.point;
         while let Some(s) = self.dfs(&mut current, &mut field) {
             let Field(field) = &mut field;
             field[current.y as usize][current.x as usize] = Square::WrappedSurface;
@@ -26,7 +26,7 @@ impl DfsWrapper {
         let h = field.len();
 
         let mut queue = std::collections::VecDeque::new();
-        queue.push_back((current.clone(), 0));
+        queue.push_back((*current, 0));
 
         let mut visited = vec![vec![-1; w]; h];
 
@@ -53,15 +53,15 @@ impl DfsWrapper {
                             (y, x - 1, Action::MoveRight),
                             (y, x + 1, Action::MoveLeft),
                         ];
-                        for (ny, nx, a) in &ns {
-                            if *ny < 0 || *ny >= h as i32 || *nx < 0 || *nx >= w as i32 {
+                        for &(ny, nx, a) in &ns {
+                            if ny < 0 || ny >= h as i32 || nx < 0 || nx >= w as i32 {
                                 continue;
                             }
-                            let ncost = visited[*ny as usize][*nx as usize];
+                            let ncost = visited[ny as usize][nx as usize];
                             if cost == ncost + 1 {
-                                actions.push(a.clone());
-                                y = *ny;
-                                x = *nx;
+                                actions.push(a);
+                                y = ny;
+                                x = nx;
                                 break;
                             }
                         }
@@ -79,17 +79,17 @@ impl DfsWrapper {
                 (p.y, p.x - 1),
                 (p.y, p.x + 1),
             ];
-            for (ny, nx) in &ns {
-                if *ny < 0 || *ny >= h as i32 || *nx < 0 || *nx >= w as i32 {
+            for &(ny, nx) in &ns {
+                if ny < 0 || ny >= h as i32 || nx < 0 || nx >= w as i32 {
                     continue;
                 }
-                if visited[*ny as usize][*nx as usize] != -1 {
+                if visited[ny as usize][nx as usize] != -1 {
                     continue;
                 }
-                if field[*ny as usize][*nx as usize] == Square::Obstacle {
+                if field[ny as usize][nx as usize] == Square::Obstacle {
                     continue;
                 }
-                queue.push_back((Point::new(*nx, *ny), cost + 1));
+                queue.push_back((Point::new(nx, ny), cost + 1));
             }
         }
         None

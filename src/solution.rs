@@ -5,7 +5,7 @@ use std::path::Path;
 
 use crate::task::Point;
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord)]
 pub enum Action {
     MoveUp,
     MoveDown,
