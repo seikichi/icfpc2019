@@ -16,6 +16,7 @@ enum GoalKind {
     UseManipulatorBooster,
     UseDrill,
     UseWheel,
+    SetBeacon,
     Wrap,
     Rotate,
     RandomMove,
@@ -178,6 +179,25 @@ impl CloningWrapper {
         return None;
     }
 
+    fn should_set_beacon(&mut self, index: usize) -> bool {
+        let r = self.rng.gen::<usize>() % 20;
+        if r == 0 || self.booster_cnts[BoosterCode::Teleport as usize] == 0 {
+            return false;
+        }
+        let pos = self.workers[index].p;
+        if self.field.get_booster_square(pos) != Square::Unknown {
+            return false;
+        }
+        // 他のビーコンと近すぎる場合は置かない
+        let d = std::cmp::max(self.field.width(), self.field.height()) as i32;
+        for &beacon_p in self.field.beacon_ps.iter() {
+            if (beacon_p - pos).manhattan_dist() < d / 8 {
+                return false;
+            }
+        }
+        return true;
+    }
+
     fn one_worker_action(&mut self, index: usize, solution: &mut Vec<Vec<Action>>) {
         self.field
             .get_booster(&mut self.workers[index], &mut self.booster_cnts);
@@ -241,6 +261,8 @@ impl CloningWrapper {
                 Square::Unknown,
                 Point::new(-1, -1),
             )
+        } else if self.should_set_beacon(index) {
+            (GoalKind::SetBeacon, Square::Unknown, Point::new(-1, -1))
         } else if let Some(p) = self.should_get_booster(index) {
             (GoalKind::GetBooster, Square::Unknown, p)
         } else {
@@ -251,6 +273,11 @@ impl CloningWrapper {
             let dy = self.workers[index].manipulators.len() - 2;
             let p = Point::new(0, dy as i32).rotate(self.workers[index].cw_rotation_count);
             let actions = vec![Action::AttachManipulator { dx: p.x, dy: p.y }];
+            self.worker_goals[index] = WorkerGoal::new(kind, target_point, actions);
+            return;
+        }
+        if kind == GoalKind::SetBeacon {
+            let actions = vec![Action::InstallBeacon];
             self.worker_goals[index] = WorkerGoal::new(kind, target_point, actions);
             return;
         }

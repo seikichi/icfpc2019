@@ -16,6 +16,7 @@ pub enum BoosterCode {
     MysteriousPoint,
     Teleport,
     Cloning,
+    Beacon,
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
@@ -140,6 +141,7 @@ impl BoosterCode {
             BoosterCode::MysteriousPoint => "X",
             BoosterCode::Teleport => "R",
             BoosterCode::Cloning => "C",
+            BoosterCode::Beacon => "!",
         }
     }
 }

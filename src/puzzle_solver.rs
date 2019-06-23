@@ -18,6 +18,7 @@ impl PuzzleSolver {
             booster_field: vec![vec![Square::Unknown; puzzle.xy_max()]; puzzle.xy_max()],
             rest_booster_cnts: vec![0; 10],
             rest_surface_cnt: 1 << 30,
+            beacon_ps: vec![],
         };
         for &p in puzzle.o_seq.iter() {
             field[p.y as usize][p.x as usize] = Square::Obstacle;

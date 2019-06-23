@@ -101,6 +101,10 @@ impl Worker {
                 booster_cnts[BoosterCode::Drill as usize] -= 1;
                 self.drill_time = 31;
             }
+            Action::InstallBeacon => {
+                booster_cnts[BoosterCode::Teleport as usize] -= 1;
+                field.set_beacon(self.p);
+            }
             Action::Cloning => {
                 let mystery_point = Square::Booster {
                     code: BoosterCode::MysteriousPoint,
@@ -168,6 +172,7 @@ impl Square {
                 BoosterCode::MysteriousPoint => 'X',
                 BoosterCode::Teleport => 'R',
                 BoosterCode::Cloning => 'C',
+                BoosterCode::Beacon => '!',
             },
             Square::Unknown => '.',
         }
@@ -180,6 +185,7 @@ pub struct Field {
     pub booster_field: Vec<Vec<Square>>,
     pub rest_booster_cnts: Vec<usize>,
     pub rest_surface_cnt: usize,
+    pub beacon_ps: Vec<Point>,
 }
 
 impl Field {
@@ -218,6 +224,15 @@ impl Field {
             self.wrap(p);
         }
     }
+    pub fn set_beacon(&mut self, p: Point) {
+        if self.booster_field[p.y as usize][p.x as usize] != Square::Unknown {
+            panic!("Here has some object");
+        }
+        self.booster_field[p.y as usize][p.x as usize] = Square::Booster {
+            code: BoosterCode::Beacon,
+        };
+        self.beacon_ps.push(p);
+    }
     // p1, p2の視線がmovableかどうかチェックする
     pub fn none_block(&self, p1: Point, p2: Point) -> bool {
         let sx = std::cmp::min(p1.x, p2.x);
@@ -238,7 +253,8 @@ impl Field {
     }
     pub fn get_booster(&mut self, worker: &Worker, booster_cnts: &mut Vec<usize>) {
         match self.booster_field[worker.p.y as usize][worker.p.x as usize] {
-            Square::Booster { code } if code == BoosterCode::MysteriousPoint => {}
+            Square::Booster { code }
+                if code == BoosterCode::MysteriousPoint || code == BoosterCode::Beacon => {}
             Square::Booster { code } => {
                 self.rest_booster_cnts[code as usize] -= 1;
                 self.booster_field[worker.p.y as usize][worker.p.x as usize] = Square::Unknown;
@@ -575,6 +591,7 @@ impl Field {
             booster_field,
             rest_booster_cnts,
             rest_surface_cnt,
+            beacon_ps: vec![],
         }
     }
 }
