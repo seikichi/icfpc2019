@@ -93,8 +93,10 @@ function postMessageToSlack(message) {
       fs.writeFileSync(inPuzzlePath, puzzle);
       fs.writeFileSync(inTaskPath, task);
 
-      await new Promise((resolve, reject) => {
-        exec(`${wrapper} < ${inTaskPath} > ${outSolutionPath}`, error => {
+      postMessageToSlack(`Start: block = ${block}`);
+
+      const wrapperPromise = new Promise((resolve, reject) => {
+        exec(`${wrapper} -c 5 < ${inTaskPath} > ${outSolutionPath}`, error => {
           if (error) {
             reject(error);
             return;
@@ -102,7 +104,7 @@ function postMessageToSlack(message) {
           resolve();
         });
       });
-      await new Promise((resolve, reject) => {
+      const puzzlePromise = new Promise((resolve, reject) => {
         exec(`${puzzler} < ${inPuzzlePath} > ${outTaskPath}`, error => {
           if (error) {
             reject(error);
@@ -111,6 +113,8 @@ function postMessageToSlack(message) {
           resolve();
         });
       });
+      await wrapperPromise;
+      await puzzlePromise;
 
       const solutionResult = await utils.checkSolution(inTaskPath, outSolutionPath);
       if (!solutionResult.success) {
