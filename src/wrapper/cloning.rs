@@ -231,17 +231,14 @@ impl CloningWrapper {
             match self.pop_grid_id() {
                 None => self.worker_goals[index] = WorkerGoal::stop(),
                 Some(grid_id) => {
-                    let target = Square::Unknown;
-                    let target_point = self.grids.find_point(grid_id);
-
-                    eprintln!("move to {:?}", target_point);
+                    eprintln!("move to grid: {:?}", grid_id);
                     if let Some((p, mut actions)) = self.field.bfs(
                         &self.workers[index],
-                        target,
-                        target_point,
+                        Square::Unknown,
+                        Point::new(-1, -1),
                         &vec![],
-                        None,
-                        None,
+                        Some(&self.grids),
+                        Some(grid_id),
                     ) {
                         eprintln!("{:?}", actions);
                         self.worker_goals[index] = WorkerGoal::move_to_grid(p, actions, grid_id);

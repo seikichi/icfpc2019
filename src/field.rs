@@ -149,13 +149,16 @@ impl Worker {
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
-pub struct Grids(Vec<Vec<i32>>);
+pub struct Grids {
+    grid_ids: Vec<Vec<i32>>,
+    rest_surface_cnt
+}
 
 impl Grids {
     pub fn find_point(&self, grid_id: i32) -> Point {
-        for y in 0..self.0.len() {
-            for x in 0..self.0[y].len() {
-                if self.0[y][x] == grid_id {
+        for y in 0..self.grid_ids.len() {
+            for x in 0..self.grid_ids[y].len() {
+                if self.grid_ids[y][x] == grid_id {
                     return Point::new(x as i32, y as i32);
                 }
             }
@@ -164,7 +167,11 @@ impl Grids {
     }
 
     pub fn in_grid(&self, grid_id: i32, p: &Point) -> bool {
-        self.0[p.y as usize][p.x as usize] == grid_id
+        self.grid_ids[p.y as usize][p.x as usize] == grid_id
+    }
+
+    pub fn is_finished(&self, grid_id: i32)-> bool {
+        
     }
 
     pub fn from(field: &Field, num: usize) -> Self {
@@ -241,7 +248,7 @@ impl Grids {
             }
             eprintln!("");
         }
-        Grids(ids)
+        Grids { grid_ids: ids }
     }
 }
 
@@ -401,8 +408,11 @@ impl Field {
         while let Some((p, cost)) = queue.pop_front() {
             let y = p.y as usize;
             let x = p.x as usize;
-            if (target != Square::Unknown
-                && (self[y][x] == target || self.booster_field[y][x] == target))
+            if (grids.is_some()
+                && grid_id.is_some()
+                && grids.unwrap().in_grid(grid_id.unwrap(), &p))
+                || (target != Square::Unknown
+                    && (self[y][x] == target || self.booster_field[y][x] == target))
                 || p == target_point
             {
                 let mut p = p;
@@ -453,11 +463,6 @@ impl Field {
                         np.x -= dx[dir];
                         np.y -= dy[dir];
                         break;
-                    }
-                }
-                if let (Some(grids), Some(grid_id)) = (grids, grid_id) {
-                    if !grids.in_grid(grid_id, &np) {
-                        continue;
                     }
                 }
                 if visited[np.y as usize][np.x as usize] != -1 {
