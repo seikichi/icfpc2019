@@ -9,97 +9,6 @@ use std::collections::VecDeque;
 use std::iter::FromIterator;
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
-pub struct Grids(Vec<Vec<i32>>);
-
-impl Grids {
-    fn find_point(&self, grid_id: i32) -> Point {
-        for y in 0..self.0.len() {
-            for x in 0..self.0[y].len() {
-                if self.0[y][x] == grid_id {
-                    return Point::new(x as i32, y as i32);
-                }
-            }
-        }
-        panic!("Failed to find ");
-    }
-
-    fn in_grid(&self, grid_id: i32, p: &Point) -> bool {
-        self.0[p.y as usize][p.x as usize] == grid_id
-    }
-
-    fn from(field: &Field, num: usize) -> Self {
-        let mut rng = rand::thread_rng();
-        let mut initial_points: Vec<Point> = vec![];
-        for _ in 0..num {
-            loop {
-                let x = rng.next_u32() % field.width() as u32;
-                let y = rng.next_u32() % field.height() as u32;
-                if field[y as usize][x as usize] == Square::Obstacle
-                    || field[y as usize][x as usize] == Square::Unknown
-                {
-                    continue;
-                }
-                if initial_points
-                    .iter()
-                    .any(|p| p.x == x as i32 && p.y == y as i32)
-                {
-                    continue;
-                }
-                initial_points.push(Point::new(x as i32, y as i32));
-                break;
-            }
-        }
-
-        let mut grids = vec![];
-        let mut ques = vec![];
-        for i in 0..num {
-            let mut que = std::collections::VecDeque::new();
-            que.push_back(initial_points[i]);
-            ques.push(que);
-            grids.push(vec![]);
-        }
-
-        let mut visited = vec![vec![false; field.width()]; field.height()];
-        while !ques.iter().all(|q| q.is_empty()) {
-            for i in 0..num {
-                if let Some(cur) = ques[i].pop_back() {
-                    if visited[cur.y as usize][cur.x as usize] {
-                        continue;
-                    }
-                    visited[cur.y as usize][cur.x as usize] = true;
-                    grids[i].push(cur);
-
-                    let dx = [1, 0, -1, 0];
-                    let dy = [0, 1, 0, -1];
-                    for d in 0..4 {
-                        let npos = cur + Point::new(dx[d], dy[d]);
-
-                        if !field.in_map(npos) {
-                            continue;
-                        }
-                        if visited[npos.y as usize][npos.x as usize] {
-                            continue;
-                        }
-                        let s = field[npos.y as usize][npos.x as usize];
-                        if s == Square::Obstacle || s == Square::Unknown {
-                            continue;
-                        }
-                        ques[i].push_back(npos);
-                    }
-                }
-            }
-        }
-        let mut ids = vec![vec![-1; field.width()]; field.height()];
-        for i in 0..num {
-            for p in &grids[i] {
-                ids[p.y as usize][p.x as usize] = i as i32;
-            }
-        }
-        Grids(ids)
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
 enum BigGoalKind {
     MoveToGrid,
     FillGrid,
@@ -231,9 +140,6 @@ impl CloningWrapper {
         field.update_surface(&mut workers[0]);
         let grid_num = 4;
         let grids = Grids::from(&field, grid_num);
-        for g in &grids.0 {
-            eprintln!("{:?}", g);
-        }
         CloningWrapper {
             task: task.clone(),
             workers,
@@ -329,10 +235,14 @@ impl CloningWrapper {
                     let target_point = self.grids.find_point(grid_id);
 
                     eprintln!("move to {:?}", target_point);
-                    if let Some((p, mut actions)) =
-                        self.field
-                            .bfs(&self.workers[index], target, target_point, &vec![])
-                    {
+                    if let Some((p, mut actions)) = self.field.bfs(
+                        &self.workers[index],
+                        target,
+                        target_point,
+                        &vec![],
+                        None,
+                        None,
+                    ) {
                         eprintln!("{:?}", actions);
                         self.worker_goals[index] = WorkerGoal::move_to_grid(p, actions, grid_id);
                     } else {
@@ -429,10 +339,14 @@ impl CloningWrapper {
             return;
         }
         let lock = self.get_lock(index);
-        if let Some((p, mut actions)) =
-            self.field
-                .bfs(&self.workers[index], target, target_point, &lock)
-        {
+        if let Some((p, mut actions)) = self.field.bfs(
+            &self.workers[index],
+            target,
+            target_point,
+            &lock,
+            Some(&self.grids),
+            self.worker_goals[index].grid_id,
+        ) {
             if kind == GoalKind::Cloning {
                 actions.push(Action::Cloning);
             }

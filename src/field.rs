@@ -2,6 +2,8 @@ use crate::solution::*;
 use crate::task::*;
 use crate::union_find::*;
 
+use rand::prelude::*;
+
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Worker {
     pub p: Point,
@@ -146,6 +148,97 @@ impl Worker {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
+pub struct Grids(Vec<Vec<i32>>);
+
+impl Grids {
+    pub fn find_point(&self, grid_id: i32) -> Point {
+        for y in 0..self.0.len() {
+            for x in 0..self.0[y].len() {
+                if self.0[y][x] == grid_id {
+                    return Point::new(x as i32, y as i32);
+                }
+            }
+        }
+        panic!("Failed to find ");
+    }
+
+    pub fn in_grid(&self, grid_id: i32, p: &Point) -> bool {
+        self.0[p.y as usize][p.x as usize] == grid_id
+    }
+
+    pub fn from(field: &Field, num: usize) -> Self {
+        let mut rng = rand::thread_rng();
+        let mut initial_points: Vec<Point> = vec![];
+        for _ in 0..num {
+            loop {
+                let x = rng.next_u32() % field.width() as u32;
+                let y = rng.next_u32() % field.height() as u32;
+                if field[y as usize][x as usize] == Square::Obstacle
+                    || field[y as usize][x as usize] == Square::Unknown
+                {
+                    continue;
+                }
+                if initial_points
+                    .iter()
+                    .any(|p| p.x == x as i32 && p.y == y as i32)
+                {
+                    continue;
+                }
+                initial_points.push(Point::new(x as i32, y as i32));
+                break;
+            }
+        }
+
+        let mut grids = vec![];
+        let mut ques = vec![];
+        for i in 0..num {
+            let mut que = std::collections::VecDeque::new();
+            que.push_back(initial_points[i]);
+            ques.push(que);
+            grids.push(vec![]);
+        }
+
+        let mut visited = vec![vec![false; field.width()]; field.height()];
+        while !ques.iter().all(|q| q.is_empty()) {
+            for i in 0..num {
+                if let Some(cur) = ques[i].pop_back() {
+                    if visited[cur.y as usize][cur.x as usize] {
+                        continue;
+                    }
+                    visited[cur.y as usize][cur.x as usize] = true;
+                    grids[i].push(cur);
+
+                    let dx = [1, 0, -1, 0];
+                    let dy = [0, 1, 0, -1];
+                    for d in 0..4 {
+                        let npos = cur + Point::new(dx[d], dy[d]);
+
+                        if !field.in_map(npos) {
+                            continue;
+                        }
+                        if visited[npos.y as usize][npos.x as usize] {
+                            continue;
+                        }
+                        let s = field[npos.y as usize][npos.x as usize];
+                        if s == Square::Obstacle || s == Square::Unknown {
+                            continue;
+                        }
+                        ques[i].push_back(npos);
+                    }
+                }
+            }
+        }
+        let mut ids = vec![vec![-1; field.width()]; field.height()];
+        for i in 0..num {
+            for p in &grids[i] {
+                ids[p.y as usize][p.x as usize] = i as i32;
+            }
+        }
+        Grids(ids)
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord)]
 pub enum Square {
     Surface,
@@ -282,6 +375,8 @@ impl Field {
         target: Square,
         target_point: Point,
         lock: &Vec<Point>,
+        grids: Option<&Grids>,
+        grid_id: Option<i32>,
     ) -> Option<(Point, Vec<Action>)> {
         let w = self.width();
         let h = self.height();
@@ -352,6 +447,11 @@ impl Field {
                         np.x -= dx[dir];
                         np.y -= dy[dir];
                         break;
+                    }
+                }
+                if let (Some(grids), Some(grid_id)) = (grids, grid_id) {
+                    if !grids.in_grid(grid_id, &np) {
+                        continue;
                     }
                 }
                 if visited[np.y as usize][np.x as usize] != -1 {
@@ -440,7 +540,6 @@ impl Field {
         None
     }
 
-
     pub fn from(task: &Task) -> Self {
         let Map(map) = &task.map;
         let x = map.iter().map(|p| p.x).max().unwrap() as usize;
@@ -505,7 +604,6 @@ impl Field {
                 prev = p;
             }
         }
-
 
         // Find Surfaces with bfs from start point
         let w = field[0].len();
