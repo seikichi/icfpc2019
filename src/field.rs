@@ -176,7 +176,7 @@ impl Field {
         // update wrapped surface
         self.wrap(worker.p);
         for &p in worker.manipulators.iter() {
-            let p = p.rotate(worker.cw_rotation_count);
+            let p = worker.p + p.rotate(worker.cw_rotation_count);
             if !self.movable(p) {
                 continue;
             }
@@ -313,7 +313,7 @@ impl Field {
             if visited[y][x] {
                 continue;
             }
-            visited[y][x] = true ;
+            visited[y][x] = true;
             if self[y][x] == target || self.booster_field[y][x] == target {
                 let end_p = Point::new(x as i32, y as i32);
                 let mut actions = vec![];
@@ -330,9 +330,9 @@ impl Field {
                         if ppos.y != ny || ppos.x != nx {
                             continue;
                         }
-                            actions.push(a);
-                            p = ppos;
-                            break;
+                        actions.push(a);
+                        p = ppos;
+                        break;
                     }
                 }
 
@@ -359,7 +359,7 @@ impl Field {
                 } else {
                     cost + 1
                 };
-                if visited[ny as usize][nx as usize] || ncost >= costs[ny as usize][nx as usize]{
+                if visited[ny as usize][nx as usize] || ncost >= costs[ny as usize][nx as usize] {
                     continue;
                 }
                 costs[ny as usize][nx as usize] = ncost;

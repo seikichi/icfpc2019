@@ -70,7 +70,11 @@ impl Wrapper for CloningWrapper {
             }
             for w in self.next_turn_workers.iter() {
                 self.workers.push(w.clone());
-                self.worker_goals.push(WorkerGoal::new(GoalKind::Rotate, Point::new(0, 0), vec![Action::TurnCW]));
+                self.worker_goals.push(WorkerGoal::new(
+                    GoalKind::Rotate,
+                    Point::new(0, 0),
+                    vec![Action::TurnCW],
+                ));
                 solution.push(vec![]);
             }
             self.next_turn_workers = vec![];
@@ -142,9 +146,7 @@ impl CloningWrapper {
             } else {
                 (GoalKind::Wrap, Square::Surface)
             };
-            if let Some((p, mut actions)) =
-                CloningWrapper::bfs(&self.field, &self.workers[index], target, &vec![])
-            {
+            if let Some((p, mut actions)) = self.field.bfs(&self.workers[index], target, &vec![]) {
                 if kind == GoalKind::Cloning {
                     actions.push(Action::Cloning);
                 }
@@ -171,87 +173,39 @@ impl CloningWrapper {
         return goal.kind == GoalKind::Wrap
             && self.field[goal.p.y as usize][goal.p.x as usize] == Square::WrappedSurface;
     }
+}
 
-    // TODO lockをちゃんと実装する
-    // lockはそのsquareがtargetであっても無視する
-    fn bfs(
-        field: &Field,
-        worker: &Worker,
-        target: Square,
-        lock: &Vec<Point>,
-    ) -> Option<(Point, Vec<Action>)> {
-        let w = field.width();
-        let h = field.height();
+#[test]
+fn test_cloning_nobooster() {
+    // .....
+    // ..#..
+    // ..#..
+    // ..#..
+    // s....
 
-        let mut current = worker.p;
-        let mut queue = std::collections::VecDeque::new();
-        queue.push_back((current, 0));
+    let map = Map(vec![
+        Point::new(0, 0),
+        Point::new(5, 0),
+        Point::new(5, 5),
+        Point::new(0, 5),
+    ]);
+    let obstacles = vec![Map(vec![
+        Point::new(2, 1),
+        Point::new(3, 1),
+        Point::new(3, 4),
+        Point::new(2, 4),
+    ])];
+    let boosters = vec![];
+    let point = Point::new(0, 0);
+    let task = Task {
+        point,
+        map,
+        obstacles,
+        boosters,
+    };
 
-        let mut visited = vec![vec![-1; w]; h];
-
-        while let Some((p, cost)) = queue.pop_front() {
-            let y = p.y as usize;
-            let x = p.x as usize;
-            if visited[y][x] != -1 {
-                continue;
-            }
-            visited[y][x] = cost;
-            if field[y][x] == target || field.booster_field[y][x] == target {
-                let end_p = Point::new(x as i32, y as i32);
-                let mut actions = vec![];
-                let mut y = y as i32;
-                let mut x = x as i32;
-                current.y = y;
-                current.x = x;
-                while visited[y as usize][x as usize] != 0 {
-                    let cost = visited[y as usize][x as usize];
-
-                    let ns = [
-                        (y - 1, x, Action::MoveUp),
-                        (y + 1, x, Action::MoveDown),
-                        (y, x - 1, Action::MoveRight),
-                        (y, x + 1, Action::MoveLeft),
-                    ];
-                    for &(ny, nx, a) in &ns {
-                        if !field.in_map(Point::new(nx, ny)) {
-                            continue;
-                        }
-                        let ncost = visited[ny as usize][nx as usize];
-                        if cost == ncost + 1 {
-                            actions.push(a);
-                            y = ny;
-                            x = nx;
-                            break;
-                        }
-                    }
-                }
-
-                actions.reverse();
-                if actions.is_empty() {
-                    actions.push(Action::DoNothing);
-                }
-                return Some((end_p, actions));
-            }
-
-            let ns = [
-                (p.y + 1, p.x),
-                (p.y - 1, p.x),
-                (p.y, p.x + 1),
-                (p.y, p.x - 1),
-            ];
-            for &(ny, nx) in &ns {
-                let np = Point::new(nx, ny);
-                if !field.movable(np) {
-                    continue;
-                }
-                if visited[ny as usize][nx as usize] != -1 {
-                    continue;
-                }
-                queue.push_back((np, cost + 1));
-            }
-        }
-        None
-    }
+    let mut wrapper = CloningWrapper::new(&task);
+    let _solution = wrapper.wrap(&task);
 }
 
 #[test]
