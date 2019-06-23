@@ -86,8 +86,8 @@ impl CloningWrapper {
     pub fn new(task: &Task, random_move_ratio: usize) -> Self {
         let mut workers = vec![Worker::new(task.point)];
         let mut field = Field::from(task);
-        let mut booster_cnts = vec![0; 10];
-        field.update_surface(&mut workers[0], &mut booster_cnts);
+        let booster_cnts = vec![0; 10];
+        field.update_surface(&mut workers[0]);
         CloningWrapper {
             workers,
             booster_cnts,
@@ -141,6 +141,7 @@ impl CloningWrapper {
     }
 
     fn one_worker_action(&mut self, index: usize, solution: &mut Vec<Vec<Action>>) {
+        self.field.get_booster(&mut self.workers[index], &mut self.booster_cnts);
         // ランダムな確率で今やる事を忘れてランダムムーブさせる
         if self.rng.gen::<usize>() % self.random_move_ratio == 0 {
             let l = self.rng.gen::<usize>() % 2 + 1;
