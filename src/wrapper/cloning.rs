@@ -83,10 +83,13 @@ impl Wrapper for CloningWrapper {
 }
 
 impl CloningWrapper {
-    pub fn new(task: &Task, random_move_ratio: usize) -> Self {
+    pub fn new(task: &Task, boosters: &Vec<BoosterCode>, random_move_ratio: usize) -> Self {
         let mut workers = vec![Worker::new(task.point)];
         let mut field = Field::from(task);
         let mut booster_cnts = vec![0; 10];
+        for b in boosters {
+            booster_cnts[*b as usize] += 1;
+        }
         field.update_surface(&mut workers[0], &mut booster_cnts);
         CloningWrapper {
             workers,
@@ -263,7 +266,7 @@ fn test_cloning_two_cloning() {
         boosters,
     };
 
-    let mut wrapper = CloningWrapper::new(&task, 1 << 30);
+    let mut wrapper = CloningWrapper::new(&task, &vec![], 1 << 30);
     let _solution = wrapper.wrap(&task);
 }
 
@@ -297,7 +300,7 @@ fn test_cloning_nocloning() {
         boosters,
     };
 
-    let mut wrapper = CloningWrapper::new(&task, 1 << 30);
+    let mut wrapper = CloningWrapper::new(&task, &vec![], 1 << 30);
     let _solution = wrapper.wrap(&task);
 }
 
@@ -332,6 +335,6 @@ fn test_cloning_with_cloning() {
         boosters,
     };
 
-    let mut wrapper = CloningWrapper::new(&task, 1 << 30);
+    let mut wrapper = CloningWrapper::new(&task, &vec![], 1 << 30);
     let _solution = wrapper.wrap(&task);
 }
