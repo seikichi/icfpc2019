@@ -137,7 +137,7 @@ impl CloningWrapper {
         for b in boosters {
             booster_cnts[*b as usize] += 1;
         }
-        let grid_num = 10; // TODO
+        let grid_num = 12; // TODO
         let mut grids = Grids::from(&field, grid_num);
         field.update_surface(&mut workers[0], &mut grids);
         CloningWrapper {
@@ -378,7 +378,11 @@ impl CloningWrapper {
             target,
             target_point,
             &lock,
-            Some(&self.grids),
+            if kind == GoalKind::Wrap {
+                Some(&self.grids)
+            } else {
+                None
+            },
             self.worker_goals[index].grid_id,
         ) {
             if kind == GoalKind::Cloning {
