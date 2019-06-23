@@ -40,6 +40,33 @@ impl Worker {
             field.update_surface(self, booster_cnts);
         }
     }
+    pub fn can_act(&self, action: Action, field: &Field, booster_cnts: &Vec<usize>) -> bool {
+        match action {
+            Action::MoveUp => {
+                field.movable(self.p + Point::new(0, 1))
+            }
+            Action::MoveDown => {
+                field.movable(self.p + Point::new(0, -1))
+            }
+            Action::MoveLeft => {
+                field.movable(self.p + Point::new(-1, 0))
+            }
+            Action::MoveRight => {
+                field.movable(self.p + Point::new(1, 0))
+            }
+            Action::DoNothing => { true }
+            Action::TurnCW => { true }
+            Action::TurnCCW => { true }
+            // Action::AttachManipulator => {booster_cnts[BoosterCode::ExtensionOfTheManipulator as usize] > 0}
+            Action::AttachFastWheels=> {booster_cnts[BoosterCode::FastWheels as usize] > 0}
+            Action::AttachDrill => {booster_cnts[BoosterCode::Drill as usize] > 0}
+            Action::Cloning => {
+                booster_cnts[BoosterCode::Cloning as usize] > 0 &&
+                field.booster_field[self.p.y as usize][self.p.x as usize] == Square::Booster { code: BoosterCode::MysteriousPoint}
+                }
+            _ => unimplemented!(),
+        }
+    }
     pub fn act(&mut self, action: Action, field: &mut Field, booster_cnts: &mut Vec<usize>) {
         match action {
             Action::MoveUp => {
@@ -214,13 +241,12 @@ impl Field {
         }
     }
 
-    // TODO lockをちゃんと実装する
-    // lockはそのsquareがtargetであっても無視する
+    // lockはそのsquareがtargetであっても無視する(通らない)
     pub fn bfs(
         &self,
         worker: &Worker,
         target: Square,
-        _lock: &Vec<Point>,
+        lock: &Vec<Point>,
     ) -> Option<(Point, Vec<Action>)> {
         let w = self.width();
         let h = self.height();
@@ -230,6 +256,9 @@ impl Field {
         queue.push_back((current, 0));
 
         let mut visited = vec![vec![-1; w]; h];
+        for p in lock.iter() {
+            visited[p.y as usize][p.x as usize] = -2;
+        }
 
         while let Some((p, cost)) = queue.pop_front() {
             let y = p.y as usize;

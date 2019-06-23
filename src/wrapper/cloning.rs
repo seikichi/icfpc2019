@@ -3,6 +3,8 @@ use crate::solution::*;
 use crate::task::*;
 use crate::wrapper::Wrapper;
 
+use rand::prelude::*;
+
 use std::collections::VecDeque;
 use std::iter::FromIterator;
 
@@ -12,7 +14,7 @@ enum GoalKind {
     Cloning,
     Wrap,
     Rotate,
-    _RandomMove,
+    RandomMove,
     Nothing,
 }
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
@@ -36,6 +38,13 @@ impl WorkerGoal {
             actions: VecDeque::from_iter([Action::DoNothing].iter().cloned()),
         }
     }
+    fn random(l: usize) -> WorkerGoal {
+        WorkerGoal {
+            kind: GoalKind::RandomMove,
+            p: Point::new(0, 0),
+            actions: VecDeque::from_iter(vec![Action::DoNothing; l].iter().cloned()),
+        }
+    }
 }
 
 pub struct CloningWrapper {
@@ -44,6 +53,7 @@ pub struct CloningWrapper {
     field: Field,
     worker_goals: Vec<WorkerGoal>,
     next_turn_workers: Vec<Worker>, // Cloneされた直後のWorker、次のターンからworkersに入る
+    rng: ThreadRng,
 }
 
 impl Wrapper for CloningWrapper {
@@ -58,12 +68,11 @@ impl Wrapper for CloningWrapper {
             field,
             worker_goals: vec![WorkerGoal::nop()],
             next_turn_workers: vec![],
+            rng: rand::thread_rng(),
         }
     }
     fn wrap(&mut self, _task: &Task) -> Solution {
         let mut solution = vec![vec![]];
-        solution[0].push(Action::TurnCCW);
-        self.workers[0].act(Action::TurnCCW, &mut self.field, &mut self.booster_cnts);
         while !self.field.is_finished() {
             for i in 0..self.workers.len() {
                 self.one_worker_action(i, &mut solution);
@@ -153,15 +162,31 @@ impl CloningWrapper {
             } else {
                 (GoalKind::Wrap, Square::Surface)
             };
-            if let Some((p, mut actions)) = self.field.bfs(&self.workers[index], target, &vec![]) {
+            let mut lock = vec![];
+            for i in 0..self.workers.len() {
+                if i == index
+                    || self.worker_goals[i].kind == GoalKind::Nothing
+                    || self.worker_goals[i].kind == GoalKind::RandomMove
+                {
+                    continue;
+                }
+                lock.push(self.worker_goals[i].p);
+            }
+            if let Some((p, mut actions)) = self.field.bfs(&self.workers[index], target, &lock) {
                 if kind == GoalKind::Cloning {
                     actions.push(Action::Cloning);
                 }
                 self.worker_goals[index] = WorkerGoal::new(kind, p, actions);
+            } else {
+                let r = self.rng.gen::<usize>() % 5 + 1;
+                self.worker_goals[index] = WorkerGoal::random(r);
             }
         }
         // Action実行
-        let action = self.worker_goals[index].actions[0];
+        let mut action = self.worker_goals[index].actions.pop_front().unwrap();
+        if self.worker_goals[index].kind == GoalKind::RandomMove {
+            action = self.get_random_action(index);
+        }
         self.workers[index].act(action, &mut self.field, &mut self.booster_cnts);
         if action == Action::Cloning {
             // Cloneの作成
@@ -169,7 +194,6 @@ impl CloningWrapper {
                 .push(Worker::new(self.workers[index].p));
         }
         solution[index].push(action);
-        self.worker_goals[index].actions.pop_front();
         if self.worker_goals[index].actions.len() == 0 {
             self.worker_goals[index] = WorkerGoal::nop();
         }
@@ -179,6 +203,23 @@ impl CloningWrapper {
         let goal = &self.worker_goals[index];
         return goal.kind == GoalKind::Wrap
             && self.field[goal.p.y as usize][goal.p.x as usize] == Square::WrappedSurface;
+    }
+
+    fn get_random_action(&mut self, index: usize) -> Action {
+        let candidate = vec![
+            Action::MoveUp,
+            Action::MoveDown,
+            Action::MoveLeft,
+            Action::MoveRight,
+            Action::TurnCW,
+            Action::TurnCCW,
+        ];
+        let r = self.rng.gen::<usize>() % candidate.len();
+        let action = candidate[r];
+        if !self.workers[index].can_act(action, &self.field, &self.booster_cnts) {
+            return Action::DoNothing;
+        }
+        return action;
     }
 }
 

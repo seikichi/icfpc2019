@@ -6,7 +6,7 @@ use crate::wrapper::Wrapper;
 pub struct DfsWrapper {}
 
 impl Wrapper for DfsWrapper {
-    fn new(task: &Task) -> Self {
+    fn new(_task: &Task) -> Self {
         DfsWrapper {}
     }
     fn wrap(&mut self, task: &Task) -> Solution {

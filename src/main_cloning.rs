@@ -12,6 +12,7 @@ fn main() -> io::Result<()> {
     let mut wrapper = CloningWrapper::new(&task);
     let solution = wrapper.wrap(&task);
     println!("{}", solution.to_string());
+    eprintln!("{}", solution.step());
 
     Ok(())
 }
