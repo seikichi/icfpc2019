@@ -23,7 +23,7 @@ impl Worker {
             drill_time: 0,
         }
     }
-    pub fn movement(&mut self, p: Point, field: &mut Field) {
+    pub fn movement(&mut self, p: Point, field: &mut Field, grids: &mut Grids) {
         let cnt = if self.fast_time > 0 { 2 } else { 1 };
         for iter in 0..cnt {
             let np = self.p + p;
@@ -40,7 +40,7 @@ impl Worker {
                 continue;
             }
             self.p = np;
-            field.update_surface(self);
+            field.update_surface(self, grids);
         }
     }
     pub fn can_act(&self, action: Action, field: &Field, booster_cnts: &Vec<usize>) -> bool {
@@ -69,22 +69,28 @@ impl Worker {
             _ => unimplemented!(),
         }
     }
-    pub fn act(&mut self, action: Action, field: &mut Field, booster_cnts: &mut Vec<usize>) {
+    pub fn act(
+        &mut self,
+        action: Action,
+        field: &mut Field,
+        booster_cnts: &mut Vec<usize>,
+        grids: &mut Grids,
+    ) {
         match action {
             Action::MoveUp => {
-                self.movement(Point::new(0, 1), field);
+                self.movement(Point::new(0, 1), field, grids);
             }
             Action::MoveDown => {
-                self.movement(Point::new(0, -1), field);
+                self.movement(Point::new(0, -1), field, grids);
             }
             Action::MoveLeft => {
-                self.movement(Point::new(-1, 0), field);
+                self.movement(Point::new(-1, 0), field, grids);
             }
             Action::MoveRight => {
-                self.movement(Point::new(1, 0), field);
+                self.movement(Point::new(1, 0), field, grids);
             }
             Action::DoNothing => {
-                field.update_surface(self);
+                field.update_surface(self, grids);
             }
             Action::AttachManipulator { dx, dy } => {
                 booster_cnts[BoosterCode::ExtensionOfTheManipulator as usize] -= 1;
@@ -151,10 +157,15 @@ impl Worker {
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Grids {
     grid_ids: Vec<Vec<i32>>,
-    rest_surface_cnt
+    rest_surface_cnt: Vec<i32>,
 }
 
 impl Grids {
+    pub fn wrap(&mut self, p: Point) {
+        let id = self.grid_ids[p.y as usize][p.x as usize];
+        self.rest_surface_cnt[id as usize] -= 1;
+    }
+
     pub fn find_point(&self, grid_id: i32) -> Point {
         for y in 0..self.grid_ids.len() {
             for x in 0..self.grid_ids[y].len() {
@@ -170,8 +181,8 @@ impl Grids {
         self.grid_ids[p.y as usize][p.x as usize] == grid_id
     }
 
-    pub fn is_finished(&self, grid_id: i32)-> bool {
-        
+    pub fn is_finished(&self, grid_id: i32) -> bool {
+        self.rest_surface_cnt[grid_id as usize] <= 0
     }
 
     pub fn from(field: &Field, num: usize) -> Self {
@@ -236,9 +247,11 @@ impl Grids {
                 }
             }
         }
+        let mut rest_surface_cnt = vec![0; num];
         let mut ids = vec![vec![-1; field.width()]; field.height()];
         for i in 0..num {
             for p in &grids[i] {
+                rest_surface_cnt[i as usize] += 1;
                 ids[p.y as usize][p.x as usize] = i as i32;
             }
         }
@@ -248,7 +261,10 @@ impl Grids {
             }
             eprintln!("");
         }
-        Grids { grid_ids: ids }
+        Grids {
+            grid_ids: ids,
+            rest_surface_cnt,
+        }
     }
 }
 
@@ -306,7 +322,7 @@ impl Field {
     pub fn get_booster_square(&self, p: Point) -> Square {
         self.booster_field[p.y as usize][p.x as usize]
     }
-    pub fn update_surface(&mut self, worker: &Worker) {
+    pub fn update_surface(&mut self, worker: &Worker, grids: &mut Grids) {
         if (worker.drill_time > 0 && !self.in_map(worker.p))
             || (worker.drill_time <= 0 && !self.movable(worker.p))
         {
@@ -314,13 +330,13 @@ impl Field {
             panic!("can't move this postion");
         }
         // update wrapped surface
-        self.wrap(worker.p);
+        self.wrap(worker.p, grids);
         for &p in worker.manipulators.iter() {
             let p = worker.p + p;
             if !self.none_block(worker.p, p) {
                 continue;
             }
-            self.wrap(p);
+            self.wrap(p, grids);
         }
     }
     // p1, p2の視線がmovableかどうかチェックする
@@ -352,9 +368,10 @@ impl Field {
             _ => {}
         };
     }
-    pub fn wrap(&mut self, p: Point) {
+    pub fn wrap(&mut self, p: Point, grids: &mut Grids) {
         if self[p.y as usize][p.x as usize] == Square::Surface {
             self.rest_surface_cnt -= 1;
+            grids.wrap(p);
         }
         self[p.y as usize][p.x as usize] = Square::WrappedSurface;
     }
@@ -410,8 +427,10 @@ impl Field {
             let x = p.x as usize;
             if (grids.is_some()
                 && grid_id.is_some()
-                && grids.unwrap().in_grid(grid_id.unwrap(), &p))
-                || (target != Square::Unknown
+                && grids.unwrap().in_grid(grid_id.unwrap(), &p)
+                && self[y][x] == target)
+                || (grids.is_none()
+                    && target != Square::Unknown
                     && (self[y][x] == target || self.booster_field[y][x] == target))
                 || p == target_point
             {

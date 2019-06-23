@@ -101,7 +101,7 @@ impl PuzzleSolver {
                 worker.manipulators = vec![];
                 if let Some((_end_pos, actions)) = self.field.dijkstra(&worker, Square::Surface) {
                     for &action in actions.iter() {
-                        worker.act(action, &mut self.field, &mut vec![0; 10]);
+                        // worker.act(action, &mut self.field, &mut vec![0; 10]);
                         candidate_poss.push(worker.p);
                     }
                 } else {
