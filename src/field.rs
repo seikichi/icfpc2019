@@ -49,7 +49,11 @@ impl Worker {
             Action::DoNothing => true,
             Action::TurnCW => true,
             Action::TurnCCW => true,
-            // Action::AttachManipulator => {booster_cnts[BoosterCode::ExtensionOfTheManipulator as usize] > 0}
+            Action::AttachManipulator { dx, dy } => {
+                let p = Point::new(dx, dy);
+                booster_cnts[BoosterCode::ExtensionOfTheManipulator as usize] > 0
+                    && self.check_manipulator_constraint(p)
+            }
             Action::AttachFastWheels => booster_cnts[BoosterCode::FastWheels as usize] > 0,
             Action::AttachDrill => booster_cnts[BoosterCode::Drill as usize] > 0,
             Action::Cloning => {
@@ -81,9 +85,11 @@ impl Worker {
             }
             Action::AttachManipulator { dx, dy } => {
                 booster_cnts[BoosterCode::ExtensionOfTheManipulator as usize] -= 1;
-                self.manipulators.push(Point::new(dx, dy));
-                self.check_manipulator_constraint();
-                field.update_surface(self);
+                let p = Point::new(dx, dy);
+                if !self.check_manipulator_constraint(p) {
+                    panic!("manipulator constraint is not satified");
+                }
+                self.manipulators.push(p);
             }
             Action::AttachFastWheels => {
                 booster_cnts[BoosterCode::FastWheels as usize] -= 1;
@@ -114,22 +120,25 @@ impl Worker {
         self.fast_time -= 1;
         self.drill_time -= 1;
     }
-    fn check_manipulator_constraint(&self) {
-        let n = self.manipulators.len();
+    fn check_manipulator_constraint(&self, p: Point) -> bool {
+        let mut manipulators = self.manipulators.clone();
+        manipulators.push(p);
+        let n = manipulators.len();
         let mut uf = UnionFind::new(n);
         for i in 0..n {
             for j in i + 1..n {
-                if self.manipulators[i] == self.manipulators[j] {
-                    panic!("multi manipulator is same position");
+                if manipulators[i] == manipulators[j] {
+                    return false;
                 }
-                if (self.manipulators[i] - self.manipulators[j]).manhattan_dist() == 1 {
+                if (manipulators[i] - manipulators[j]).manhattan_dist() == 1 {
                     uf.union_set(i, j);
                 }
             }
         }
         if uf.size(0) != n {
-            panic!("Manipulator constraint is not satisfied");
+            return false;
         }
+        return true;
     }
 }
 
@@ -180,6 +189,12 @@ impl Field {
     }
     pub fn movable(&self, p: Point) -> bool {
         return self.in_map(p) && self[p.y as usize][p.x as usize] != Square::Obstacle;
+    }
+    pub fn get_square(&self, p: Point) -> Square {
+        self[p.y as usize][p.x as usize]
+    }
+    pub fn get_booster_square(&self, p: Point) -> Square {
+        self.booster_field[p.y as usize][p.x as usize]
     }
     pub fn update_surface(&mut self, worker: &Worker) {
         if (worker.drill_time > 0 && !self.in_map(worker.p)) || !self.movable(worker.p) {
@@ -241,6 +256,7 @@ impl Field {
         &self,
         worker: &Worker,
         target: Square,
+        target_point: Point,
         lock: &Vec<Point>,
     ) -> Option<(Point, Vec<Action>)> {
         let w = self.width();
@@ -262,7 +278,7 @@ impl Field {
                 continue;
             }
             visited[y][x] = cost;
-            if self[y][x] == target || self.booster_field[y][x] == target {
+            if (target != Square::Unknown &&  (self[y][x] == target || self.booster_field[y][x] == target)) || p == target_point {
                 let end_p = Point::new(x as i32, y as i32);
                 let mut actions = vec![];
                 let mut y = y as i32;

@@ -12,6 +12,7 @@ use std::iter::FromIterator;
 enum GoalKind {
     GetCloningBooster,
     Cloning,
+    GetBooster,
     Wrap,
     Rotate,
     RandomMove,
@@ -48,6 +49,7 @@ impl WorkerGoal {
 }
 
 pub struct CloningWrapper {
+    task: Task,
     workers: Vec<Worker>,
     booster_cnts: Vec<usize>,
     field: Field,
@@ -92,6 +94,7 @@ impl CloningWrapper {
         }
         field.update_surface(&mut workers[0]);
         CloningWrapper {
+            task: task.clone(),
             workers,
             booster_cnts,
             field,
@@ -143,6 +146,22 @@ impl CloningWrapper {
         return other_goal_cnt < self.field.rest_booster_cnts[BoosterCode::Cloning as usize];
     }
 
+    fn should_get_booster(&self, index: usize) -> Option<Point> {
+        for booster_location in self.task.boosters.iter() {
+            let p = booster_location.point;
+            if booster_location.code == BoosterCode::Cloning
+                || booster_location.code == BoosterCode::MysteriousPoint
+                || self.field.get_booster_square(p) == Square::Unknown
+                || (p - self.workers[index].p).manhattan_dist() > 2
+                || self.is_locked(p, index)
+            {
+                continue;
+            }
+            return Some(p);
+        }
+        return None;
+    }
+
     fn one_worker_action(&mut self, index: usize, solution: &mut Vec<Vec<Action>>) {
         self.field
             .get_booster(&mut self.workers[index], &mut self.booster_cnts);
@@ -157,12 +176,13 @@ impl CloningWrapper {
         }
         if self.worker_goals[index].kind == GoalKind::Nothing {
             // goalを決めてアクション列を作る
-            let (kind, target) = if self.should_cloning(index) {
+            let (kind, target, target_point) = if self.should_cloning(index) {
                 (
                     GoalKind::Cloning,
                     Square::Booster {
                         code: BoosterCode::MysteriousPoint,
                     },
+                    Point::new(-1, -1),
                 )
             } else if self.should_get_cloning_booster(index) {
                 (
@@ -170,21 +190,18 @@ impl CloningWrapper {
                     Square::Booster {
                         code: BoosterCode::Cloning,
                     },
+                    Point::new(-1, -1),
                 )
+            } else if let Some(p) = self.should_get_booster(index) {
+                (GoalKind::GetBooster, Square::Unknown, p)
             } else {
-                (GoalKind::Wrap, Square::Surface)
+                (GoalKind::Wrap, Square::Surface, Point::new(-1, -1))
             };
-            let mut lock = vec![];
-            for i in 0..self.workers.len() {
-                if i == index
-                    || self.worker_goals[i].kind == GoalKind::Nothing
-                    || self.worker_goals[i].kind == GoalKind::RandomMove
-                {
-                    continue;
-                }
-                lock.push(self.worker_goals[i].p);
-            }
-            if let Some((p, mut actions)) = self.field.bfs(&self.workers[index], target, &lock) {
+            let lock = self.get_lock(index);
+            if let Some((p, mut actions)) =
+                self.field
+                    .bfs(&self.workers[index], target, target_point, &lock)
+            {
                 if kind == GoalKind::Cloning {
                     actions.push(Action::Cloning);
                 }
@@ -232,6 +249,28 @@ impl CloningWrapper {
             return Action::DoNothing;
         }
         return action;
+    }
+    fn is_locked(&self, p: Point, index: usize) -> bool {
+        let lock = self.get_lock(index);
+        for &np in lock.iter() {
+            if np == p {
+                return true;
+            }
+        }
+        return false;
+    }
+    fn get_lock(&self, index: usize) -> Vec<Point> {
+        let mut lock = vec![];
+        for i in 0..self.workers.len() {
+            if i == index
+                || self.worker_goals[i].kind == GoalKind::Nothing
+                || self.worker_goals[i].kind == GoalKind::RandomMove
+            {
+                continue;
+            }
+            lock.push(self.worker_goals[i].p);
+        }
+        return lock;
     }
 }
 

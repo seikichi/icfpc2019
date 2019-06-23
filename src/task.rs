@@ -196,7 +196,7 @@ impl Point {
         };
     }
     pub fn manhattan_dist(self) -> i32 {
-        self.x + self.y
+        self.x.abs() + self.y.abs()
     }
     pub fn to_string(&self) -> String {
         let mut ret = "".to_string();
