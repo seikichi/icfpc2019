@@ -6,9 +6,6 @@ use crate::wrapper::Wrapper;
 pub struct DfsWrapper {}
 
 impl Wrapper for DfsWrapper {
-    fn new(_task: &Task) -> Self {
-        DfsWrapper {}
-    }
     fn wrap(&mut self, task: &Task) -> Solution {
         let mut solution = vec![];
         let mut field = Field::from(task);
@@ -30,6 +27,9 @@ impl Wrapper for DfsWrapper {
 }
 
 impl DfsWrapper {
+    pub fn new(_task: &Task) -> Self {
+        DfsWrapper {}
+    }
     fn dfs(&mut self, current: &mut Point, field: &mut Field) -> Option<Vec<Action>> {
         let w = field.width();
         let h = field.height();

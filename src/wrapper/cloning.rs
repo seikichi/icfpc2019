@@ -54,23 +54,10 @@ pub struct CloningWrapper {
     worker_goals: Vec<WorkerGoal>,
     next_turn_workers: Vec<Worker>, // Cloneされた直後のWorker、次のターンからworkersに入る
     rng: ThreadRng,
+    random_move_ratio: usize,
 }
 
 impl Wrapper for CloningWrapper {
-    fn new(task: &Task) -> Self {
-        let mut workers = vec![Worker::new(task.point)];
-        let mut field = Field::from(task);
-        let mut booster_cnts = vec![0; 10];
-        field.update_surface(&mut workers[0], &mut booster_cnts);
-        CloningWrapper {
-            workers,
-            booster_cnts,
-            field,
-            worker_goals: vec![WorkerGoal::nop()],
-            next_turn_workers: vec![],
-            rng: rand::thread_rng(),
-        }
-    }
     fn wrap(&mut self, _task: &Task) -> Solution {
         let mut solution = vec![vec![]];
         while !self.field.is_finished() {
@@ -96,6 +83,21 @@ impl Wrapper for CloningWrapper {
 }
 
 impl CloningWrapper {
+    pub fn new(task: &Task, random_move_ratio: usize) -> Self {
+        let mut workers = vec![Worker::new(task.point)];
+        let mut field = Field::from(task);
+        let mut booster_cnts = vec![0; 10];
+        field.update_surface(&mut workers[0], &mut booster_cnts);
+        CloningWrapper {
+            workers,
+            booster_cnts,
+            field,
+            worker_goals: vec![WorkerGoal::nop()],
+            next_turn_workers: vec![],
+            rng: rand::thread_rng(),
+            random_move_ratio: random_move_ratio,
+        }
+    }
     // cloning boosterがあって他の人がcloningしようとしてなければやるべき
     fn should_cloning(&self, index: usize) -> bool {
         if self.field.rest_booster_cnts[BoosterCode::MysteriousPoint as usize] == 0
@@ -139,6 +141,11 @@ impl CloningWrapper {
     }
 
     fn one_worker_action(&mut self, index: usize, solution: &mut Vec<Vec<Action>>) {
+        // ランダムな確率で今やる事を忘れてランダムムーブさせる
+        if self.rng.gen::<usize>() % self.random_move_ratio == 0 {
+            let l = self.rng.gen::<usize>() % 2 + 1;
+            self.worker_goals[index] = WorkerGoal::random(l);
+        }
         // 塗ろうとして行っている箇所がすでに塗られていたら考え直す
         if self.is_already_wrapped_goal(index) {
             self.worker_goals[index] = WorkerGoal::nop();
