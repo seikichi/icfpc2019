@@ -49,7 +49,11 @@ impl Worker {
             Action::DoNothing => true,
             Action::TurnCW => true,
             Action::TurnCCW => true,
-            // Action::AttachManipulator => {booster_cnts[BoosterCode::ExtensionOfTheManipulator as usize] > 0}
+            Action::AttachManipulator { dx, dy } => {
+                let p = Point::new(dx, dy);
+                booster_cnts[BoosterCode::ExtensionOfTheManipulator as usize] > 0
+                    && self.check_manipulator_constraint(p)
+            }
             Action::AttachFastWheels => booster_cnts[BoosterCode::FastWheels as usize] > 0,
             Action::AttachDrill => booster_cnts[BoosterCode::Drill as usize] > 0,
             Action::Cloning => {
@@ -81,9 +85,11 @@ impl Worker {
             }
             Action::AttachManipulator { dx, dy } => {
                 booster_cnts[BoosterCode::ExtensionOfTheManipulator as usize] -= 1;
-                self.manipulators.push(Point::new(dx, dy));
-                self.check_manipulator_constraint();
-                field.update_surface(self);
+                let p = Point::new(dx, dy);
+                if !self.check_manipulator_constraint(p) {
+                    panic!("manipulator constraint is not satified");
+                }
+                self.manipulators.push(p);
             }
             Action::AttachFastWheels => {
                 booster_cnts[BoosterCode::FastWheels as usize] -= 1;
@@ -114,22 +120,25 @@ impl Worker {
         self.fast_time -= 1;
         self.drill_time -= 1;
     }
-    fn check_manipulator_constraint(&self) {
-        let n = self.manipulators.len();
+    fn check_manipulator_constraint(&self, p: Point) -> bool {
+        let mut manipulators = self.manipulators.clone();
+        manipulators.push(p);
+        let n = manipulators.len();
         let mut uf = UnionFind::new(n);
         for i in 0..n {
             for j in i + 1..n {
-                if self.manipulators[i] == self.manipulators[j] {
-                    panic!("multi manipulator is same position");
+                if manipulators[i] == manipulators[j] {
+                    return false;
                 }
-                if (self.manipulators[i] - self.manipulators[j]).manhattan_dist() == 1 {
+                if (manipulators[i] - manipulators[j]).manhattan_dist() == 1 {
                     uf.union_set(i, j);
                 }
             }
         }
         if uf.size(0) != n {
-            panic!("Manipulator constraint is not satisfied");
+            return false;
         }
+        return true;
     }
 }
 
