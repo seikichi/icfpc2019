@@ -137,7 +137,7 @@ impl CloningWrapper {
         for b in boosters {
             booster_cnts[*b as usize] += 1;
         }
-        let grid_num = 4;
+        let grid_num = 12;
         let mut grids = Grids::from(&field, grid_num);
         field.update_surface(&mut workers[0], &mut grids);
         CloningWrapper {
