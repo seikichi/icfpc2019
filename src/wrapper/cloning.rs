@@ -410,9 +410,6 @@ impl CloningWrapper {
                 actions.push(Action::Cloning);
             }
             self.worker_goals[index] = WorkerGoal::new(kind, p, actions);
-        // if self.workers[index].fast_time > 0 {
-        //     eprintln!("{:?}, {:?}", self.workers[index], self.worker_goals[index]);
-        // }
         } else {
             let r = self.rng.gen::<usize>() % 5 + 1;
             self.worker_goals[index] = WorkerGoal::random(r);
@@ -437,9 +434,9 @@ impl CloningWrapper {
             } else if self.booster_cnts[BoosterCode::FastWheels as usize] > 0
                 && self.workers[index].fast_time <= 0
             {
-                // // 純粋に遠い場合はFastWheelを使う
-                // self.worker_goals[index] =
-                //     WorkerGoal::new(GoalKind::UseWheel, target_p, vec![Action::AttachFastWheels]);
+                // 純粋に遠い場合はFastWheelを使う
+                self.worker_goals[index] =
+                    WorkerGoal::new(GoalKind::UseWheel, target_p, vec![Action::AttachFastWheels]);
             }
         }
     }
