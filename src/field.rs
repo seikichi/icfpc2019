@@ -21,7 +21,7 @@ impl Worker {
             drill_time: 0,
         }
     }
-    pub fn movement(&mut self, p: Point, field: &mut Field, booster_cnts: &mut Vec<usize>) {
+    pub fn movement(&mut self, p: Point, field: &mut Field) {
         let cnt = if self.fast_time > 0 { 2 } else { 1 };
         for iter in 0..cnt {
             let np = self.p + p;
@@ -37,58 +37,53 @@ impl Worker {
                 continue;
             }
             self.p = np;
-            field.update_surface(self, booster_cnts);
+            field.update_surface(self);
         }
     }
     pub fn can_act(&self, action: Action, field: &Field, booster_cnts: &Vec<usize>) -> bool {
         match action {
-            Action::MoveUp => {
-                field.movable(self.p + Point::new(0, 1))
-            }
-            Action::MoveDown => {
-                field.movable(self.p + Point::new(0, -1))
-            }
-            Action::MoveLeft => {
-                field.movable(self.p + Point::new(-1, 0))
-            }
-            Action::MoveRight => {
-                field.movable(self.p + Point::new(1, 0))
-            }
-            Action::DoNothing => { true }
-            Action::TurnCW => { true }
-            Action::TurnCCW => { true }
+            Action::MoveUp => field.movable(self.p + Point::new(0, 1)),
+            Action::MoveDown => field.movable(self.p + Point::new(0, -1)),
+            Action::MoveLeft => field.movable(self.p + Point::new(-1, 0)),
+            Action::MoveRight => field.movable(self.p + Point::new(1, 0)),
+            Action::DoNothing => true,
+            Action::TurnCW => true,
+            Action::TurnCCW => true,
             // Action::AttachManipulator => {booster_cnts[BoosterCode::ExtensionOfTheManipulator as usize] > 0}
-            Action::AttachFastWheels=> {booster_cnts[BoosterCode::FastWheels as usize] > 0}
-            Action::AttachDrill => {booster_cnts[BoosterCode::Drill as usize] > 0}
+            Action::AttachFastWheels => booster_cnts[BoosterCode::FastWheels as usize] > 0,
+            Action::AttachDrill => booster_cnts[BoosterCode::Drill as usize] > 0,
             Action::Cloning => {
-                booster_cnts[BoosterCode::Cloning as usize] > 0 &&
-                field.booster_field[self.p.y as usize][self.p.x as usize] == Square::Booster { code: BoosterCode::MysteriousPoint}
-                }
+                booster_cnts[BoosterCode::Cloning as usize] > 0
+                    && field.booster_field[self.p.y as usize][self.p.x as usize]
+                        == Square::Booster {
+                            code: BoosterCode::MysteriousPoint,
+                        }
+            }
             _ => unimplemented!(),
         }
     }
     pub fn act(&mut self, action: Action, field: &mut Field, booster_cnts: &mut Vec<usize>) {
         match action {
             Action::MoveUp => {
-                self.movement(Point::new(0, 1), field, booster_cnts);
+                self.movement(Point::new(0, 1), field);
             }
             Action::MoveDown => {
-                self.movement(Point::new(0, -1), field, booster_cnts);
+                self.movement(Point::new(0, -1), field);
             }
             Action::MoveLeft => {
-                self.movement(Point::new(-1, 0), field, booster_cnts);
+                self.movement(Point::new(-1, 0), field);
             }
             Action::MoveRight => {
-                self.movement(Point::new(1, 0), field, booster_cnts);
+                self.movement(Point::new(1, 0), field);
             }
             Action::DoNothing => {
-                field.update_surface(self, booster_cnts);
+                field.update_surface(self);
             }
             Action::AttachManipulator { dx, dy } => {
                 booster_cnts[BoosterCode::ExtensionOfTheManipulator as usize] -= 1;
                 self.manipulators.push(Point::new(dx, dy));
                 self.check_manipulator_constraint();
-                field.update_surface(self, booster_cnts);
+                field.update_surface(self);
             }
             Action::AttachFastWheels => {
                 booster_cnts[BoosterCode::FastWheels as usize] -= 1;
@@ -186,20 +181,10 @@ impl Field {
     pub fn movable(&self, p: Point) -> bool {
         return self.in_map(p) && self[p.y as usize][p.x as usize] != Square::Obstacle;
     }
-    pub fn update_surface(&mut self, worker: &Worker, booster_cnts: &mut Vec<usize>) {
+    pub fn update_surface(&mut self, worker: &Worker) {
         if (worker.drill_time > 0 && !self.in_map(worker.p)) || !self.movable(worker.p) {
             panic!("can't move this postion");
         }
-        // get booster
-        let booster = match self.booster_field[worker.p.y as usize][worker.p.x as usize] {
-            Square::Booster { code } if code == BoosterCode::MysteriousPoint => {}
-            Square::Booster { code } => {
-                self.rest_booster_cnts[code as usize] -= 1;
-                self.booster_field[worker.p.y as usize][worker.p.x as usize] = Square::Unknown;
-                booster_cnts[code as usize] += 1;
-            }
-            _ => {}
-        };
         // update wrapped surface
         self.wrap(worker.p);
         for &p in worker.manipulators.iter() {
@@ -210,7 +195,17 @@ impl Field {
             // TODO 見えるかどうかのチェック
             self.wrap(p);
         }
-        return booster;
+    }
+    pub fn get_booster(&mut self, worker: &Worker, booster_cnts: &mut Vec<usize>) {
+        match self.booster_field[worker.p.y as usize][worker.p.x as usize] {
+            Square::Booster { code } if code == BoosterCode::MysteriousPoint => {}
+            Square::Booster { code } => {
+                self.rest_booster_cnts[code as usize] -= 1;
+                self.booster_field[worker.p.y as usize][worker.p.x as usize] = Square::Unknown;
+                booster_cnts[code as usize] += 1;
+            }
+            _ => {}
+        };
     }
     pub fn wrap(&mut self, p: Point) {
         if self[p.y as usize][p.x as usize] == Square::Surface {
