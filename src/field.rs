@@ -161,6 +161,10 @@ pub struct Grids {
 }
 
 impl Grids {
+    pub fn grid_id_of(&self, p: Point) -> i32 {
+        self.grid_ids[p.y as usize][p.x as usize]
+    }
+
     pub fn wrap(&mut self, p: Point) {
         let id = self.grid_ids[p.y as usize][p.x as usize];
         self.rest_surface_cnt[id as usize] -= 1;

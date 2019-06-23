@@ -137,7 +137,7 @@ impl CloningWrapper {
         for b in boosters {
             booster_cnts[*b as usize] += 1;
         }
-        let grid_num = 12;
+        let grid_num = 30;
         let mut grids = Grids::from(&field, grid_num);
         field.update_surface(&mut workers[0], &mut grids);
         CloningWrapper {
@@ -211,11 +211,29 @@ impl CloningWrapper {
         return None;
     }
 
-    fn pop_grid_id(&mut self) -> Option<i32> {
+    fn pop_grid_id(&mut self, index: usize) -> Option<i32> {
         // TODO
         // - 近いやつにする
         // - pop じゃなくて flag を持たせて最後協力して grid を複数 worker で倒す
-        self.rest_grid_ids.pop()
+        if self.rest_grid_ids.is_empty() {
+            return None;
+        }
+
+        let (p, _) = self
+            .field
+            .bfs(
+                &self.workers[index],
+                Square::Surface,
+                Point::new(-1, -1),
+                &vec![],
+                None,
+                None,
+            )
+            .unwrap();
+        let grid_id = self.grids.grid_id_of(p);
+        self.rest_grid_ids.retain(|&id| id != grid_id);
+
+        Some(grid_id)
     }
 
     fn one_worker_action(&mut self, index: usize, solution: &mut Vec<Vec<Action>>) {
@@ -227,11 +245,11 @@ impl CloningWrapper {
         // MoveToGrid -> Grid への移動を決めて終わり (BFS)
         // FillGrid -> 以下の処理
         if self.worker_goals[index].big_kind == BigGoalKind::Nothing {
-            eprintln!("Nothing");
-            match self.pop_grid_id() {
+            // eprintln!("Nothing");
+            match self.pop_grid_id(index) {
                 None => self.worker_goals[index] = WorkerGoal::stop(),
                 Some(grid_id) => {
-                    eprintln!("move to grid: {:?}", grid_id);
+                    // eprintln!("move to grid: {:?}", grid_id);
                     if let Some((p, actions)) = self.field.bfs(
                         &self.workers[index],
                         Square::Surface,
@@ -240,7 +258,7 @@ impl CloningWrapper {
                         Some(&self.grids),
                         Some(grid_id),
                     ) {
-                        eprintln!("{:?}", actions);
+                        // eprintln!("{:?}", actions);
                         self.worker_goals[index] = WorkerGoal::move_to_grid(p, actions, grid_id);
                     } else {
                         panic!("Faild to move grid");
@@ -249,12 +267,12 @@ impl CloningWrapper {
             }
         }
         if self.worker_goals[index].big_kind == BigGoalKind::Stop {
-            eprintln!("Stop");
+            // eprintln!("Stop");
             solution[index].push(Action::DoNothing);
             return;
         }
         if self.worker_goals[index].big_kind == BigGoalKind::MoveToGrid {
-            eprintln!("MoveToGrid");
+            // eprintln!("MoveToGrid");
             let action = self.worker_goals[index].actions.pop_front().unwrap();
             self.workers[index].act(
                 action,
@@ -270,10 +288,10 @@ impl CloningWrapper {
             }
             return;
         }
-        eprintln!("FillGrid");
+        // eprintln!("FillGrid");
         let grid_id = self.worker_goals[index].grid_id.unwrap();
         if self.grids.is_finished(grid_id) {
-            eprintln!("grids.is_finished()");
+            // eprintln!("grids.is_finished()");
             self.worker_goals[index] = WorkerGoal::initialize();
             return;
         }
