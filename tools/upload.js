@@ -16,32 +16,40 @@ function timeunits(solution) {
   return actions.match(/[A-Z]/g).length;
 }
 
-async function upload_with_check(key, taskPath, solutionPath) {
-  const current = await utils.checkSolution(taskPath, solutionPath);
+async function upload_with_check(key, taskPath, solutionPath, boosterPath) {
+  const current = await utils.checkSolution(taskPath, solutionPath, boosterPath);
   if (!current.success) {
-    console.error(`Invalid task or solution ${key}, ${taskPath}, ${solutionPath}`);
+    console.error(`Invalid task or solution ${key}, ${taskPath}, ${solutionPath}, ${boosterPath}, ${current}`);
     process.exit(-1);
   }
   upload(key, solutionPath);
 }
 
 (async () => {
-  if (process.argv.length !== 5) {
-    console.error("node upload.js id task.desc solution.sol");
+  if (process.argv.length !== 5 && process.argv.length !== 6) {
+    console.error("node upload.js id task.desc solution.sol [boosters]");
     process.exit(-1);
   }
 
   const problemId = process.argv[2];
   const taskPath = process.argv[3];
   const solutionPath = process.argv[4];
+  const boosters = process.argv[5] || '';
+  const boosterTemporaryFile = tmp.fileSync();
+  fs.writeFileSync(boosterTemporaryFile.name, boosters);
+  const boosterPath = boosters === ''
+        ? null
+        : boosterTemporaryFile.name;
 
-  const key = `solutions/problems/prob-${problemId}.sol`;
+  const key = boosters === ''
+        ? `solutions/problems/prob-${problemId}.sol`
+        : `solutions/problems-with-${boosters}/prob-${problemId}.sol`;
   try {
     await s3.headObject({ Key: key }).promise();
   } catch (error) {
     if (error.code === 'NotFound') {
       console.log(`${key} does not exists, try to upload the given solution.`);
-      upload_with_check(key, taskPath, solutionPath);
+      upload_with_check(key, taskPath, solutionPath, boosterPath);
       return;
     }
     throw error;
@@ -56,6 +64,6 @@ async function upload_with_check(key, taskPath, solutionPath) {
     return;
   }
 
-  console.log(`The new solution of problem ${problemId} (${new_timeunits}) seems better than old one (${old_timeunits}), try to upload it.`);
-  upload_with_check(key, taskPath, solutionPath);
+  console.log(`The new solution of problem ${problemId} (${new_timeunits}) seems better than old one (${old_timeunits}), try to upload it. (${key})`);
+  upload_with_check(key, taskPath, solutionPath, boosterPath);
 })();

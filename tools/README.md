@@ -34,7 +34,12 @@ solutions/problems/prob-001.desc does not exists, upload the given solution.
 
 > node tools/upload.js 010 path/to/prob-010.desc path/to/new-prob-010.sol
 The given solution (10) seems better than old one (13), upload it ...
+
+> node tools/upload.js 010 path/to/prob-010.desc path/to/new-prob-010.sol C
+The given solution (8) seems better than old one (10), upload it ...
 ```
+
+boosters を使う場合は最後の引数に指定して下さい。アップロード先の S3 のパスが変わることに注意。
 
 ## puzzle-checker.js
 
@@ -61,6 +66,12 @@ The given solution (10) seems better than old one (13), upload it ...
 ```sh
 > node tools/checker.js path/to/prob-010.desc path/to/prob-010.sol
 {"success":true, "timeunits":585}
+
+> echo $?
+0
+
+> node tools/checker.js path/to/prob-010.desc path/to/prob-010.sol path/to/prob-010.buy
+{"success":true, "timeunits":400}
 
 > echo $?
 0
