@@ -119,7 +119,7 @@ impl WorkerGoal {
     }
     fn nop() -> WorkerGoal {
         WorkerGoal {
-            big_kind: BigGoalKind::Nothing,
+            big_kind: BigGoalKind::FillGrid,
             kind: GoalKind::Nothing,
             p: Point::new(0, 0),
             actions: VecDeque::from_iter([Action::DoNothing].iter().cloned()),
@@ -132,6 +132,15 @@ impl WorkerGoal {
             kind: GoalKind::RandomMove,
             p: Point::new(0, 0),
             actions: VecDeque::from_iter(vec![Action::DoNothing; l].iter().cloned()),
+            grid: None,
+        }
+    }
+    fn initialize() -> WorkerGoal {
+        WorkerGoal {
+            big_kind: BigGoalKind::Nothing,
+            kind: GoalKind::Nothing,
+            p: Point::new(0, 0),
+            actions: VecDeque::from_iter(vec![Action::DoNothing].iter().cloned()),
             grid: None,
         }
     }
@@ -176,11 +185,7 @@ impl Wrapper for CloningWrapper {
             }
             for w in self.next_turn_workers.iter() {
                 self.workers.push(w.clone());
-                self.worker_goals.push(WorkerGoal::new(
-                    GoalKind::Rotate,
-                    Point::new(0, 0),
-                    vec![Action::TurnCW],
-                ));
+                self.worker_goals.push(WorkerGoal::initialize());
                 solution.push(vec![]);
             }
             self.next_turn_workers = vec![];
@@ -204,14 +209,14 @@ impl CloningWrapper {
         field.update_surface(&mut workers[0]);
         let grids = Grid::from(&field, 4);
         for g in &grids {
-            println!("{:?}", g);
+            eprintln!("{:?}", g);
         }
         CloningWrapper {
             task: task.clone(),
             workers,
             booster_cnts,
             field,
-            worker_goals: vec![WorkerGoal::nop()],
+            worker_goals: vec![WorkerGoal::initialize()],
             next_turn_workers: vec![],
             rng: rand::thread_rng(),
             random_move_ratio: random_move_ratio,
@@ -292,6 +297,7 @@ impl CloningWrapper {
         // MoveToGrid -> Grid への移動を決めて終わり (BFS)
         // FillGrid -> 以下の処理
         if self.worker_goals[index].big_kind == BigGoalKind::Nothing {
+            eprintln!("Nothing");
             match self.pop_grid() {
                 None => self.worker_goals[index] = WorkerGoal::stop(),
                 Some(grid) => {
@@ -301,6 +307,7 @@ impl CloningWrapper {
                         self.field
                             .bfs(&self.workers[index], target, target_point, &vec![])
                     {
+                        eprintln!("{:?}", actions);
                         self.worker_goals[index] = WorkerGoal::move_to_grid(p, actions, grid);
                     } else {
                         panic!("Faild to move grid");
@@ -309,10 +316,12 @@ impl CloningWrapper {
             }
         }
         if self.worker_goals[index].big_kind == BigGoalKind::Stop {
+            eprintln!("Stop");
             solution[index].push(Action::DoNothing);
             return;
         }
         if self.worker_goals[index].big_kind == BigGoalKind::MoveToGrid {
+            eprintln!("MoveToGrid");
             let action = self.worker_goals[index].actions.pop_front().unwrap();
             self.workers[index].act(action, &mut self.field, &mut self.booster_cnts);
             if self.worker_goals[index].actions.len() == 0 {
@@ -321,6 +330,7 @@ impl CloningWrapper {
             }
             return;
         }
+        eprintln!("FillGrid");
 
         // ランダムな確率で今やる事を忘れてランダムムーブさせる
         if self.rng.gen::<usize>() % self.random_move_ratio == 0 {
