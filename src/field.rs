@@ -235,6 +235,12 @@ impl Grids {
                 ids[p.y as usize][p.x as usize] = i as i32;
             }
         }
+        for y in 0..ids.len() {
+            for x in 0..ids[y].len() {
+                eprint!("{: >3}", ids[y][x]);
+            }
+            eprintln!("");
+        }
         Grids(ids)
     }
 }
