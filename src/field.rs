@@ -31,6 +31,7 @@ impl Worker {
                 field.movable(np)
             };
             if iter == 0 && !movable {
+                eprintln!("{:?} {:?}", self, p);
                 panic!("can't move!")
             }
             if !movable {
@@ -93,11 +94,11 @@ impl Worker {
             }
             Action::AttachFastWheels => {
                 booster_cnts[BoosterCode::FastWheels as usize] -= 1;
-                self.fast_time = 50;
+                self.fast_time = 51;
             }
             Action::AttachDrill => {
                 booster_cnts[BoosterCode::Drill as usize] -= 1;
-                self.drill_time = 30;
+                self.drill_time = 31;
             }
             Action::Cloning => {
                 let mystery_point = Square::Booster {
@@ -291,6 +292,7 @@ impl Field {
 
         let mut visited = vec![vec![-1; w]; h];
         let mut parents = vec![vec![Point::new(0, 0); w]; h];
+        visited[current.y as usize][current.x as usize] = 0;
         for p in lock.iter() {
             visited[p.y as usize][p.x as usize] = -2;
         }
@@ -298,10 +300,6 @@ impl Field {
         while let Some((p, cost)) = queue.pop_front() {
             let y = p.y as usize;
             let x = p.x as usize;
-            if visited[y][x] != -1 {
-                continue;
-            }
-            visited[y][x] = cost;
             if (target != Square::Unknown
                 && (self[y][x] == target || self.booster_field[y][x] == target))
                 || p == target_point
@@ -334,7 +332,7 @@ impl Field {
                 return Some((end_p, actions));
             }
 
-            let move_distance = if worker.fast_time - cost <= 0 { 1 } else { 2 };
+            let move_distance = if worker.fast_time - cost > 0 { 2 } else { 1 };
             let drill = worker.drill_time - cost > 0;
             let dy = vec![1, -1, 0, 0];
             let dx = vec![0, 0, 1, -1];
@@ -357,6 +355,7 @@ impl Field {
                 if visited[np.y as usize][np.x as usize] != -1 {
                     continue;
                 }
+                visited[np.y as usize][np.x as usize] = cost + 1;
                 parents[np.y as usize][np.x as usize] = p;
                 queue.push_back((np, cost + 1));
             }
