@@ -8,13 +8,14 @@ const fetch = require('node-fetch');
 const publicId = '99';
 
 const wrapper = '/home/ec2-user/src/icfpc2019/target/release/main_cloning';
+const puzzler = '/home/ec2-user/src/icfpc2019/target/release/puzzler';
 
 async function getblockinfo() {
   const response = await fetch('http://127.0.0.1:8332/', {
     method: 'POST',
-        headers: {
-          'Content-Type': 'text/plain',
-        },
+    headers: {
+      'Content-Type': 'text/plain',
+    },
     body: JSON.stringify({
       id: 'curl',
       jsonrpc: '2.0',
@@ -85,8 +86,15 @@ async function submit(params) {
           resolve();
         });
       });
-
-      // T.B.D. (exec puzzler);
+      await new Promise((resolve, reject) => {
+        exec(`${puzzler} < ${inPuzzlePath} > ${outTaskPath}`, error => {
+          if (error) {
+            reject(error);
+            return;
+          }
+          resolve();
+        });
+      });
 
       const solutionResult = await utils.checkSolution(inTaskPath, outSolutionPath);
       if (!solutionResult.success) {
@@ -99,8 +107,9 @@ async function submit(params) {
         console.log(`Puzzle Chcker Failed: ${JSON.stringify(puzzleResult)}`);
         continue;
       }
+      console.log("LGTM, let's submit!");
 
-      const result = submit([
+      const result = await submit([
         block,
         path.resolve(outSolutionPath),
         path.resolve(outTaskPath),
