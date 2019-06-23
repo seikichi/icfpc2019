@@ -232,10 +232,7 @@ impl CloningWrapper {
         if kind == GoalKind::UseManipulatorBooster {
             let dy = self.workers[index].manipulators.len() - 2;
             let p = Point::new(0, dy as i32).rotate(self.workers[index].cw_rotation_count);
-            let actions = vec![Action::AttachManipulator {
-                dx: p.x,
-                dy: p.y,
-            }];
+            let actions = vec![Action::AttachManipulator { dx: p.x, dy: p.y }];
             self.worker_goals[index] = WorkerGoal::new(kind, target_point, actions);
             return;
         }

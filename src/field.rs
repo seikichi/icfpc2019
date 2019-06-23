@@ -224,7 +224,6 @@ impl Field {
         }
         for y in sy..ey + 1 {
             for x in sx..ex + 1 {
-                // println!("{:?} {} {}", p2 - p1, y - sy, x - sx);
                 if !self.movable(Point::new(x, y)) {
                     return false;
                 }
@@ -283,11 +282,12 @@ impl Field {
         let w = self.width();
         let h = self.height();
 
-        let mut current = worker.p;
+        let current = worker.p;
         let mut queue = std::collections::VecDeque::new();
         queue.push_back((current, 0));
 
         let mut visited = vec![vec![-1; w]; h];
+        let mut parents = vec![vec![Point::new(0, 0); w]; h];
         for p in lock.iter() {
             visited[p.y as usize][p.x as usize] = -2;
         }
@@ -303,33 +303,25 @@ impl Field {
                 && (self[y][x] == target || self.booster_field[y][x] == target))
                 || p == target_point
             {
+                let mut p = p;
                 let end_p = Point::new(x as i32, y as i32);
                 let mut actions = vec![];
-                let mut y = y as i32;
-                let mut x = x as i32;
-                current.y = y;
-                current.x = x;
-                while visited[y as usize][x as usize] != 0 {
-                    let cost = visited[y as usize][x as usize];
+                while visited[p.y as usize][p.x as usize] != 0 {
+                    let ppos = parents[p.y as usize][p.x as usize];
 
-                    let ns = [
-                        (y - 1, x, Action::MoveUp),
-                        (y + 1, x, Action::MoveDown),
-                        (y, x - 1, Action::MoveRight),
-                        (y, x + 1, Action::MoveLeft),
-                    ];
-                    for &(ny, nx, a) in &ns {
-                        if !self.in_map(Point::new(nx, ny)) {
-                            continue;
-                        }
-                        let ncost = visited[ny as usize][nx as usize];
-                        if cost == ncost + 1 {
-                            actions.push(a);
-                            y = ny;
-                            x = nx;
-                            break;
-                        }
-                    }
+                    let a = if p.y > ppos.y {
+                        Action::MoveUp
+                    } else if p.y < ppos.y {
+                        Action::MoveDown
+                    } else if p.x > ppos.x {
+                        Action::MoveRight
+                    } else if p.x < ppos.x {
+                        Action::MoveLeft
+                    } else {
+                        panic!("wrong move");
+                    };
+                    p = ppos;
+                    actions.push(a);
                 }
 
                 actions.reverse();
@@ -353,6 +345,7 @@ impl Field {
                 if visited[ny as usize][nx as usize] != -1 {
                     continue;
                 }
+                parents[ny as usize][nx as usize] = p;
                 queue.push_back((np, cost + 1));
             }
         }
