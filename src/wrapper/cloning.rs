@@ -80,6 +80,7 @@ impl Wrapper for CloningWrapper {
             self.next_turn_workers = vec![];
             // println!("{:?}", self.workers);
             // println!("{:?}", self.worker_goals);
+            // self.field.print(0, 0, 40, 40);
         }
         return Solution(solution);
     }
@@ -113,11 +114,17 @@ impl CloningWrapper {
         {
             return false;
         }
-        if self.worker_goals[index].kind == GoalKind::Cloning {
+        if self.worker_goals[index].kind == GoalKind::Cloning
+            || self.worker_goals[index].kind == GoalKind::GetCloningBooster
+        {
             return true;
         }
         let other_goal_cnt = self.worker_goals.iter().fold(0, |sum, goal| {
-            sum + if goal.kind == GoalKind::Cloning { 1 } else { 0 }
+            sum + if goal.kind == GoalKind::GetCloningBooster {
+                1
+            } else {
+                0
+            }
         });
         return other_goal_cnt < self.field.rest_booster_cnts[BoosterCode::Cloning as usize];
     }
@@ -176,12 +183,12 @@ impl CloningWrapper {
 }
 
 #[test]
-fn test_cloning_nobooster() {
-    // .....
+fn test_cloning_two_cloning() {
+    // .X...
     // ..#..
+    // C.#..
     // ..#..
-    // ..#..
-    // s....
+    // s.C..
 
     let map = Map(vec![
         Point::new(0, 0),
@@ -195,7 +202,11 @@ fn test_cloning_nobooster() {
         Point::new(3, 4),
         Point::new(2, 4),
     ])];
-    let boosters = vec![];
+    let boosters = vec![
+        BoosterLocation::new(BoosterCode::Cloning, Point::new(2, 0)),
+        BoosterLocation::new(BoosterCode::Cloning, Point::new(0, 2)),
+        BoosterLocation::new(BoosterCode::MysteriousPoint, Point::new(1, 4)),
+    ];
     let point = Point::new(0, 0);
     let task = Task {
         point,
