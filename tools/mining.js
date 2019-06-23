@@ -9,6 +9,8 @@ const publicId = '99';
 const wrapper = path.resolve('target/release/main_cloning');
 const puzzler = path.resolve('target/release/puzzler');
 
+const SOLVER_TRY_COUNT = 5;
+
 const webhookUrl = process.env['ICFPC2019_SLACK_WEBHOOK_URL'];
 if (!webhookUrl) {
   console.error('Please set ICFPC2019_SLACK_WEBHOOK_URL env');
@@ -67,6 +69,7 @@ function postMessageToSlack(message) {
 
 (async () => {
   let last = 0;
+  let count = SOLVER_TRY_COUNT;
   while (true) {
     console.log("Sleep 10 seconds ...");
     await new Promise(resolve => setTimeout(resolve, 10 * 1000));
@@ -93,8 +96,10 @@ function postMessageToSlack(message) {
       fs.writeFileSync(inPuzzlePath, puzzle);
       fs.writeFileSync(inTaskPath, task);
 
-      await new Promise((resolve, reject) => {
-        exec(`${wrapper} < ${inTaskPath} > ${outSolutionPath}`, error => {
+      postMessageToSlack(`Start: block = ${block}`);
+
+      const wrapperPromise = new Promise((resolve, reject) => {
+        exec(`${wrapper} -c ${count} < ${inTaskPath} > ${outSolutionPath}`, error => {
           if (error) {
             reject(error);
             return;
@@ -102,7 +107,7 @@ function postMessageToSlack(message) {
           resolve();
         });
       });
-      await new Promise((resolve, reject) => {
+      const puzzlePromise = new Promise((resolve, reject) => {
         exec(`${puzzler} < ${inPuzzlePath} > ${outTaskPath}`, error => {
           if (error) {
             reject(error);
@@ -111,6 +116,8 @@ function postMessageToSlack(message) {
           resolve();
         });
       });
+      await wrapperPromise;
+      await puzzlePromise;
 
       const solutionResult = await utils.checkSolution(inTaskPath, outSolutionPath);
       if (!solutionResult.success) {
@@ -132,9 +139,11 @@ function postMessageToSlack(message) {
       console.log(`Done: ${JSON.stringify(result)}`);
       postMessageToSlack(`Submit Done: block = ${block}, timeunits = ${solutionResult.timeunits}, result = ${JSON.stringify(result)}`);
       last = block;
+      count = SOLVER_TRY_COUNT;
     } catch (e) {
       console.log(e);
-      postMessageToSlack(`mining.js: Error ${e}`);
+      postMessageToSlack(`@seikichi: mining.js: Error ${e}`);
+      count = 1;
     }
   }
 })();
