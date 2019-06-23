@@ -169,6 +169,10 @@ impl CloningWrapper {
             if booster_location.code == BoosterCode::Cloning
                 || booster_location.code == BoosterCode::MysteriousPoint
                 || self.field.get_booster_square(p) == Square::Unknown
+                || self.field.get_booster_square(p)
+                    == (Square::Booster {
+                        code: BoosterCode::Beacon,
+                    })
                 || (p - self.workers[index].p).manhattan_dist() > 2
                 || self.is_locked(p, index)
             {
@@ -282,10 +286,18 @@ impl CloningWrapper {
             return;
         }
         let lock = self.get_lock(index);
-        if let Some((p, mut actions)) =
+        if let Some((mut p, mut actions)) =
             self.field
                 .bfs(&self.workers[index], target, target_point, &lock, false)
         {
+            let (t_p, t_actions) = self
+                .field
+                .bfs(&self.workers[index], Square::Unknown, p, &vec![], true)
+                .unwrap();
+            assert!(p == t_p);
+            assert!(t_actions.len() <= actions.len());
+            p = t_p;
+            actions = t_actions;
             if kind == GoalKind::Cloning {
                 actions.push(Action::Cloning);
             }

@@ -82,9 +82,7 @@ impl Worker {
             Action::MoveRight => {
                 self.movement(Point::new(1, 0), field);
             }
-            Action::DoNothing => {
-                field.update_surface(self);
-            }
+            Action::DoNothing => {}
             Action::AttachManipulator { dx, dy } => {
                 booster_cnts[BoosterCode::ExtensionOfTheManipulator as usize] -= 1;
                 let p = Point::new(dx, dy);
@@ -105,6 +103,17 @@ impl Worker {
                 booster_cnts[BoosterCode::Teleport as usize] -= 1;
                 field.set_beacon(self.p);
             }
+            Action::Teleports { x, y } => {
+                if field.get_booster_square(Point::new(x, y))
+                    != (Square::Booster {
+                        code: BoosterCode::Beacon,
+                    })
+                {
+                    eprintln!("{:?} {} {}", self, x, y);
+                    panic!("Beacon is not set");
+                }
+                self.p = Point::new(x, y);
+            }
             Action::Cloning => {
                 let mystery_point = Square::Booster {
                     code: BoosterCode::MysteriousPoint,
@@ -123,10 +132,11 @@ impl Worker {
                 self.manipulators = self.manipulators.iter().map(|p| p.rotate(3)).collect();
                 self.cw_rotation_count = (self.cw_rotation_count + 3) % 4;
             }
-            _ => unimplemented!(),
+            // _ => unimplemented!(),
         }
         self.fast_time -= 1;
         self.drill_time -= 1;
+        field.update_surface(self);
     }
     fn check_manipulator_constraint(&self, p: Point) -> bool {
         let mut manipulators = self.manipulators.clone();
@@ -299,7 +309,7 @@ impl Field {
         target: Square,
         target_point: Point,
         lock: &Vec<Point>,
-        using_teleport: bool
+        using_teleport: bool,
     ) -> Option<(Point, Vec<Action>)> {
         let w = self.width();
         let h = self.height();
@@ -340,8 +350,12 @@ impl Field {
                     let ppos = parents[p.y as usize][p.x as usize];
 
                     let a = if using_teleport
-                               && self.get_booster_square(p) == (Square::Booster { code: BoosterCode::Beacon })
-                               && ppos == worker.p {
+                        && self.get_booster_square(p)
+                            == (Square::Booster {
+                                code: BoosterCode::Beacon,
+                            })
+                        && ppos == worker.p
+                    {
                         Action::Teleports { x: p.x, y: p.y }
                     } else if p.y > ppos.y {
                         Action::MoveUp
