@@ -9,10 +9,25 @@ use std::collections::VecDeque;
 use std::iter::FromIterator;
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
-pub struct Grid(Vec<Point>);
+pub struct Grids(Vec<Vec<i32>>);
 
-impl Grid {
-    fn from(field: &Field, num: usize) -> Vec<Grid> {
+impl Grids {
+    fn find_point(&self, grid_id: i32) -> Point {
+        for y in 0..self.0.len() {
+            for x in 0..self.0[y].len() {
+                if self.0[y][x] == grid_id {
+                    return Point::new(x as i32, y as i32);
+                }
+            }
+        }
+        panic!("Failed to find ");
+    }
+
+    fn in_grid(&self, grid_id: i32, p: &Point) -> bool {
+        self.0[p.y as usize][p.x as usize] == grid_id
+    }
+
+    fn from(field: &Field, num: usize) -> Self {
         let mut rng = rand::thread_rng();
         let mut initial_points: Vec<Point> = vec![];
         for _ in 0..num {
@@ -41,7 +56,7 @@ impl Grid {
             let mut que = std::collections::VecDeque::new();
             que.push_back(initial_points[i]);
             ques.push(que);
-            grids.push(Grid(vec![]));
+            grids.push(vec![]);
         }
 
         let mut visited = vec![vec![false; field.width()]; field.height()];
@@ -52,7 +67,7 @@ impl Grid {
                         continue;
                     }
                     visited[cur.y as usize][cur.x as usize] = true;
-                    grids[i].0.push(cur);
+                    grids[i].push(cur);
 
                     let dx = [1, 0, -1, 0];
                     let dy = [0, 1, 0, -1];
@@ -74,7 +89,13 @@ impl Grid {
                 }
             }
         }
-        grids
+        let mut ids = vec![vec![-1; field.width()]; field.height()];
+        for i in 0..num {
+            for p in &grids[i] {
+                ids[p.y as usize][p.x as usize] = i as i32;
+            }
+        }
+        Grids(ids)
     }
 }
 
@@ -105,7 +126,7 @@ struct WorkerGoal {
     kind: GoalKind,
     p: Point,
     actions: VecDeque<Action>,
-    grid: Option<Grid>,
+    grid_id: Option<i32>,
 }
 impl WorkerGoal {
     fn new(kind: GoalKind, p: Point, actions: Vec<Action>) -> WorkerGoal {
@@ -114,7 +135,7 @@ impl WorkerGoal {
             kind,
             p,
             actions: VecDeque::from_iter(actions.into_iter()),
-            grid: None,
+            grid_id: None,
         }
     }
     fn nop() -> WorkerGoal {
@@ -123,7 +144,7 @@ impl WorkerGoal {
             kind: GoalKind::Nothing,
             p: Point::new(0, 0),
             actions: VecDeque::from_iter([Action::DoNothing].iter().cloned()),
-            grid: None,
+            grid_id: None,
         }
     }
     fn random(l: usize) -> WorkerGoal {
@@ -132,7 +153,7 @@ impl WorkerGoal {
             kind: GoalKind::RandomMove,
             p: Point::new(0, 0),
             actions: VecDeque::from_iter(vec![Action::DoNothing; l].iter().cloned()),
-            grid: None,
+            grid_id: None,
         }
     }
     fn initialize() -> WorkerGoal {
@@ -141,7 +162,7 @@ impl WorkerGoal {
             kind: GoalKind::Nothing,
             p: Point::new(0, 0),
             actions: VecDeque::from_iter(vec![Action::DoNothing].iter().cloned()),
-            grid: None,
+            grid_id: None,
         }
     }
     fn stop() -> WorkerGoal {
@@ -150,16 +171,16 @@ impl WorkerGoal {
             kind: GoalKind::Nothing,
             p: Point::new(0, 0),
             actions: VecDeque::new(),
-            grid: None,
+            grid_id: None,
         }
     }
-    fn move_to_grid(p: Point, actions: Vec<Action>, grid: Grid) -> WorkerGoal {
+    fn move_to_grid(p: Point, actions: Vec<Action>, grid_id: i32) -> WorkerGoal {
         WorkerGoal {
             big_kind: BigGoalKind::MoveToGrid,
             kind: GoalKind::Nothing,
             p,
             actions: VecDeque::from_iter(actions.into_iter()),
-            grid: Some(grid),
+            grid_id: Some(grid_id),
         }
     }
 }
@@ -173,7 +194,8 @@ pub struct CloningWrapper {
     next_turn_workers: Vec<Worker>, // Cloneされた直後のWorker、次のターンからworkersに入る
     rng: ThreadRng,
     random_move_ratio: usize,
-    grids: Vec<Grid>,
+    grids: Grids,
+    rest_grid_ids: Vec<i32>,
 }
 
 impl Wrapper for CloningWrapper {
@@ -207,8 +229,9 @@ impl CloningWrapper {
             booster_cnts[*b as usize] += 1;
         }
         field.update_surface(&mut workers[0]);
-        let grids = Grid::from(&field, 4);
-        for g in &grids {
+        let grid_num = 4;
+        let grids = Grids::from(&field, grid_num);
+        for g in &grids.0 {
             eprintln!("{:?}", g);
         }
         CloningWrapper {
@@ -221,6 +244,7 @@ impl CloningWrapper {
             rng: rand::thread_rng(),
             random_move_ratio: random_move_ratio,
             grids,
+            rest_grid_ids: (0..(grid_num as i32)).collect(),
         }
     }
     // cloning boosterがあって他の人がcloningしようとしてなければやるべき
@@ -281,11 +305,11 @@ impl CloningWrapper {
         return None;
     }
 
-    fn pop_grid(&mut self) -> Option<Grid> {
+    fn pop_grid_id(&mut self) -> Option<i32> {
         // TODO
         // - 近いやつにする
         // - pop じゃなくて flag を持たせて最後協力して grid を複数 worker で倒す
-        self.grids.pop()
+        self.rest_grid_ids.pop()
     }
 
     fn one_worker_action(&mut self, index: usize, solution: &mut Vec<Vec<Action>>) {
@@ -298,11 +322,11 @@ impl CloningWrapper {
         // FillGrid -> 以下の処理
         if self.worker_goals[index].big_kind == BigGoalKind::Nothing {
             eprintln!("Nothing");
-            match self.pop_grid() {
+            match self.pop_grid_id() {
                 None => self.worker_goals[index] = WorkerGoal::stop(),
-                Some(grid) => {
+                Some(grid_id) => {
                     let target = Square::Unknown;
-                    let target_point = grid.0[0];
+                    let target_point = self.grids.find_point(grid_id);
 
                     eprintln!("move to {:?}", target_point);
                     if let Some((p, mut actions)) =
@@ -310,7 +334,7 @@ impl CloningWrapper {
                             .bfs(&self.workers[index], target, target_point, &vec![])
                     {
                         eprintln!("{:?}", actions);
-                        self.worker_goals[index] = WorkerGoal::move_to_grid(p, actions, grid);
+                        self.worker_goals[index] = WorkerGoal::move_to_grid(p, actions, grid_id);
                     } else {
                         panic!("Faild to move grid");
                     }
