@@ -79,6 +79,13 @@ impl Grid {
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
+enum BigGoalKind {
+    MoveToGrid,
+    FillGrid,
+    Nothing,
+}
+
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
 enum GoalKind {
     GetCloningBooster,
     Cloning,
@@ -93,30 +100,38 @@ enum GoalKind {
 }
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
 struct WorkerGoal {
+    big_kind: BigGoalKind,
     kind: GoalKind,
     p: Point,
     actions: VecDeque<Action>,
+    grid: Option<Grid>,
 }
 impl WorkerGoal {
     fn new(kind: GoalKind, p: Point, actions: Vec<Action>) -> WorkerGoal {
         WorkerGoal {
+            big_kind: BigGoalKind::FillGrid, // TODO
             kind,
             p,
             actions: VecDeque::from_iter(actions.into_iter()),
+            gird: None,
         }
     }
     fn nop() -> WorkerGoal {
         WorkerGoal {
+            big_kind: BigGoalKind::Nothing, // TODO
             kind: GoalKind::Nothing,
             p: Point::new(0, 0),
             actions: VecDeque::from_iter([Action::DoNothing].iter().cloned()),
+            gird: None,
         }
     }
     fn random(l: usize) -> WorkerGoal {
         WorkerGoal {
+            big_kind: BigGoalKind::FillGrid, // TODO
             kind: GoalKind::RandomMove,
             p: Point::new(0, 0),
             actions: VecDeque::from_iter(vec![Action::DoNothing; l].iter().cloned()),
+            gird: None,
         }
     }
 }
@@ -245,6 +260,12 @@ impl CloningWrapper {
     fn one_worker_action(&mut self, index: usize, solution: &mut Vec<Vec<Action>>) {
         self.field
             .get_booster(&mut self.workers[index], &mut self.booster_cnts);
+
+        // 大目標を見て...
+        // Nothing -> Grid を決める
+        // MoveToGrid -> Grid への移動を決めて終わり (BFS)
+        // FillGrid -> 以下の処理
+
         // ランダムな確率で今やる事を忘れてランダムムーブさせる
         if self.rng.gen::<usize>() % self.random_move_ratio == 0 {
             let l = self.rng.gen::<usize>() % 2 + 1;
