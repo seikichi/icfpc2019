@@ -110,9 +110,11 @@ impl Worker {
                 // Workerを増やす処理は呼び出し側がする事
             }
             Action::TurnCW => {
+                self.manipulators = self.manipulators.iter().map(|p| p.rotate(1)).collect();
                 self.cw_rotation_count = (self.cw_rotation_count + 1) % 4;
             }
             Action::TurnCCW => {
+                self.manipulators = self.manipulators.iter().map(|p| p.rotate(3)).collect();
                 self.cw_rotation_count = (self.cw_rotation_count + 3) % 4;
             }
             _ => unimplemented!(),
@@ -122,6 +124,7 @@ impl Worker {
     }
     fn check_manipulator_constraint(&self, p: Point) -> bool {
         let mut manipulators = self.manipulators.clone();
+        manipulators.push(Point::new(0, 0));
         manipulators.push(p);
         let n = manipulators.len();
         let mut uf = UnionFind::new(n);
@@ -203,13 +206,31 @@ impl Field {
         // update wrapped surface
         self.wrap(worker.p);
         for &p in worker.manipulators.iter() {
-            let p = worker.p + p.rotate(worker.cw_rotation_count);
-            if !self.movable(p) {
+            let p = worker.p + p;
+            if !self.none_block(worker.p, p) {
                 continue;
             }
-            // TODO 見えるかどうかのチェック
             self.wrap(p);
         }
+    }
+    // p1, p2の視線がmovableかどうかチェックする
+    pub fn none_block(&self, p1: Point, p2: Point) -> bool {
+        let sx = std::cmp::min(p1.x, p2.x);
+        let sy = std::cmp::min(p1.y, p2.y);
+        let ex = std::cmp::max(p1.x, p2.x);
+        let ey = std::cmp::max(p1.y, p2.y);
+        if (ex - sx).abs() <= 1 && (ey - sy).abs() <= 1 {
+            return self.movable(p1) && self.movable(p2);
+        }
+        for y in sy..ey + 1 {
+            for x in sx..ex + 1 {
+                // println!("{:?} {} {}", p2 - p1, y - sy, x - sx);
+                if !self.movable(Point::new(x, y)) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
     pub fn get_booster(&mut self, worker: &Worker, booster_cnts: &mut Vec<usize>) {
         match self.booster_field[worker.p.y as usize][worker.p.x as usize] {
@@ -278,7 +299,10 @@ impl Field {
                 continue;
             }
             visited[y][x] = cost;
-            if (target != Square::Unknown &&  (self[y][x] == target || self.booster_field[y][x] == target)) || p == target_point {
+            if (target != Square::Unknown
+                && (self[y][x] == target || self.booster_field[y][x] == target))
+                || p == target_point
+            {
                 let end_p = Point::new(x as i32, y as i32);
                 let mut actions = vec![];
                 let mut y = y as i32;

@@ -13,6 +13,8 @@ enum GoalKind {
     GetCloningBooster,
     Cloning,
     GetBooster,
+    UseManipulatorBooster,
+    // TODO
     Wrap,
     Rotate,
     RandomMove,
@@ -174,42 +176,9 @@ impl CloningWrapper {
         if self.is_already_wrapped_goal(index) {
             self.worker_goals[index] = WorkerGoal::nop();
         }
+        // GoalとActionを決める
         if self.worker_goals[index].kind == GoalKind::Nothing {
-            // goalを決めてアクション列を作る
-            let (kind, target, target_point) = if self.should_cloning(index) {
-                (
-                    GoalKind::Cloning,
-                    Square::Booster {
-                        code: BoosterCode::MysteriousPoint,
-                    },
-                    Point::new(-1, -1),
-                )
-            } else if self.should_get_cloning_booster(index) {
-                (
-                    GoalKind::GetCloningBooster,
-                    Square::Booster {
-                        code: BoosterCode::Cloning,
-                    },
-                    Point::new(-1, -1),
-                )
-            } else if let Some(p) = self.should_get_booster(index) {
-                (GoalKind::GetBooster, Square::Unknown, p)
-            } else {
-                (GoalKind::Wrap, Square::Surface, Point::new(-1, -1))
-            };
-            let lock = self.get_lock(index);
-            if let Some((p, mut actions)) =
-                self.field
-                    .bfs(&self.workers[index], target, target_point, &lock)
-            {
-                if kind == GoalKind::Cloning {
-                    actions.push(Action::Cloning);
-                }
-                self.worker_goals[index] = WorkerGoal::new(kind, p, actions);
-            } else {
-                let r = self.rng.gen::<usize>() % 5 + 1;
-                self.worker_goals[index] = WorkerGoal::random(r);
-            }
+            self.decide_goal_and_action(index);
         }
         // Action実行
         let mut action = self.worker_goals[index].actions.pop_front().unwrap();
@@ -225,6 +194,63 @@ impl CloningWrapper {
         solution[index].push(action);
         if self.worker_goals[index].actions.len() == 0 {
             self.worker_goals[index] = WorkerGoal::nop();
+        }
+    }
+
+    // goalを決めてアクション列を作る
+    fn decide_goal_and_action(&mut self, index: usize) {
+        let (kind, target, target_point) = if self.should_cloning(index) {
+            (
+                GoalKind::Cloning,
+                Square::Booster {
+                    code: BoosterCode::MysteriousPoint,
+                },
+                Point::new(-1, -1),
+            )
+        } else if self.should_get_cloning_booster(index) {
+            (
+                GoalKind::GetCloningBooster,
+                Square::Booster {
+                    code: BoosterCode::Cloning,
+                },
+                Point::new(-1, -1),
+            )
+        } else if index == 0
+            && self.booster_cnts[BoosterCode::ExtensionOfTheManipulator as usize] > 0
+        {
+            (
+                GoalKind::UseManipulatorBooster,
+                Square::Unknown,
+                Point::new(-1, -1),
+            )
+        } else if let Some(p) = self.should_get_booster(index) {
+            (GoalKind::GetBooster, Square::Unknown, p)
+        } else {
+            (GoalKind::Wrap, Square::Surface, Point::new(-1, -1))
+        };
+
+        if kind == GoalKind::UseManipulatorBooster {
+            let dy = self.workers[index].manipulators.len() - 2;
+            let p = Point::new(0, dy as i32).rotate(self.workers[index].cw_rotation_count);
+            let actions = vec![Action::AttachManipulator {
+                dx: p.x,
+                dy: p.y,
+            }];
+            self.worker_goals[index] = WorkerGoal::new(kind, target_point, actions);
+            return;
+        }
+        let lock = self.get_lock(index);
+        if let Some((p, mut actions)) =
+            self.field
+                .bfs(&self.workers[index], target, target_point, &lock)
+        {
+            if kind == GoalKind::Cloning {
+                actions.push(Action::Cloning);
+            }
+            self.worker_goals[index] = WorkerGoal::new(kind, p, actions);
+        } else {
+            let r = self.rng.gen::<usize>() % 5 + 1;
+            self.worker_goals[index] = WorkerGoal::random(r);
         }
     }
 
