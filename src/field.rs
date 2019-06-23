@@ -190,6 +190,12 @@ impl Field {
     pub fn movable(&self, p: Point) -> bool {
         return self.in_map(p) && self[p.y as usize][p.x as usize] != Square::Obstacle;
     }
+    pub fn get_square(&self, p: Point) -> Square {
+        self[p.y as usize][p.x as usize]
+    }
+    pub fn get_booster_square(&self, p: Point) -> Square {
+        self.booster_field[p.y as usize][p.x as usize]
+    }
     pub fn update_surface(&mut self, worker: &Worker) {
         if (worker.drill_time > 0 && !self.in_map(worker.p)) || !self.movable(worker.p) {
             panic!("can't move this postion");
@@ -250,6 +256,7 @@ impl Field {
         &self,
         worker: &Worker,
         target: Square,
+        target_point: Point,
         lock: &Vec<Point>,
     ) -> Option<(Point, Vec<Action>)> {
         let w = self.width();
@@ -271,7 +278,7 @@ impl Field {
                 continue;
             }
             visited[y][x] = cost;
-            if self[y][x] == target || self.booster_field[y][x] == target {
+            if (target != Square::Unknown &&  (self[y][x] == target || self.booster_field[y][x] == target)) || p == target_point {
                 let end_p = Point::new(x as i32, y as i32);
                 let mut actions = vec![];
                 let mut y = y as i32;
