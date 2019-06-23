@@ -14,7 +14,8 @@ enum GoalKind {
     Cloning,
     GetBooster,
     UseManipulatorBooster,
-    // TODO
+    UseDrill,
+    UseWheel,
     Wrap,
     Rotate,
     RandomMove,
@@ -82,6 +83,7 @@ impl Wrapper for CloningWrapper {
             // println!("{:?}", self.worker_goals);
             // self.field.print(0, 0, 40, 40);
         }
+        eprintln!("{:?}", self.booster_cnts);
         return Solution(solution);
     }
 }
@@ -245,9 +247,37 @@ impl CloningWrapper {
                 actions.push(Action::Cloning);
             }
             self.worker_goals[index] = WorkerGoal::new(kind, p, actions);
+        // if self.workers[index].fast_time > 0 {
+        //     eprintln!("{:?}, {:?}", self.workers[index], self.worker_goals[index]);
+        // }
         } else {
             let r = self.rng.gen::<usize>() % 5 + 1;
             self.worker_goals[index] = WorkerGoal::random(r);
+        }
+
+        // WheelとDrillのチェック
+        // 使う場合は終点のロックをとったままgoalを書き換える
+        // 次のターンにactionsが空になるので直ぐにGoalが再計算される
+        let action_cnt = self.worker_goals[index].actions.len();
+        let r = self.rng.gen::<usize>() % 2;
+        if action_cnt > 40 && r == 0 {
+            let target_p = self.worker_goals[index].p;
+            if self.booster_cnts[BoosterCode::Drill as usize] > 0
+                && self.workers[index].drill_time <= 0
+                && ((self.workers[index].p - self.worker_goals[index].p).manhattan_dist() as f64
+                    / action_cnt as f64)
+                    < 0.7f64
+            {
+                // マンハッタン距離は近いのにアクションの系列が長い場合はドリルを使うことにする
+                self.worker_goals[index] =
+                    WorkerGoal::new(GoalKind::UseDrill, target_p, vec![Action::AttachDrill]);
+            } else if self.booster_cnts[BoosterCode::FastWheels as usize] > 0
+                && self.workers[index].fast_time <= 0
+            {
+                // // 純粋に遠い場合はFastWheelを使う
+                // self.worker_goals[index] =
+                //     WorkerGoal::new(GoalKind::UseWheel, target_p, vec![Action::AttachFastWheels]);
+            }
         }
     }
 

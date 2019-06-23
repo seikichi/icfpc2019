@@ -200,7 +200,10 @@ impl Field {
         self.booster_field[p.y as usize][p.x as usize]
     }
     pub fn update_surface(&mut self, worker: &Worker) {
-        if (worker.drill_time > 0 && !self.in_map(worker.p)) || !self.movable(worker.p) {
+        if (worker.drill_time > 0 && !self.in_map(worker.p))
+            || (worker.drill_time <= 0 && !self.movable(worker.p))
+        {
+            eprintln!("{:?}", worker);
             panic!("can't move this postion");
         }
         // update wrapped surface
@@ -331,21 +334,30 @@ impl Field {
                 return Some((end_p, actions));
             }
 
-            let ns = [
-                (p.y + 1, p.x),
-                (p.y - 1, p.x),
-                (p.y, p.x + 1),
-                (p.y, p.x - 1),
-            ];
-            for &(ny, nx) in &ns {
-                let np = Point::new(nx, ny);
-                if !self.movable(np) {
+            let move_distance = if worker.fast_time - cost <= 0 { 1 } else { 2 };
+            let drill = worker.drill_time - cost > 0;
+            let dy = vec![1, -1, 0, 0];
+            let dx = vec![0, 0, 1, -1];
+            'outer_loop: for dir in 0..4 {
+                let mut np = p;
+                for _d in 0..move_distance {
+                    np.x += dx[dir];
+                    np.y += dy[dir];
+                    let movable = if drill {
+                        self.in_map(np)
+                    } else {
+                        self.movable(np)
+                    };
+                    if !movable {
+                        np.x -= dx[dir];
+                        np.y -= dy[dir];
+                        break;
+                    }
+                }
+                if visited[np.y as usize][np.x as usize] != -1 {
                     continue;
                 }
-                if visited[ny as usize][nx as usize] != -1 {
-                    continue;
-                }
-                parents[ny as usize][nx as usize] = p;
+                parents[np.y as usize][np.x as usize] = p;
                 queue.push_back((np, cost + 1));
             }
         }
