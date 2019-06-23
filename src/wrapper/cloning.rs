@@ -137,7 +137,7 @@ impl CloningWrapper {
         for b in boosters {
             booster_cnts[*b as usize] += 1;
         }
-        let grid_num = 30;
+        let grid_num = 10; // TODO
         let mut grids = Grids::from(&field, grid_num);
         field.update_surface(&mut workers[0], &mut grids);
         CloningWrapper {
@@ -215,25 +215,26 @@ impl CloningWrapper {
         // TODO
         // - 近いやつにする
         // - pop じゃなくて flag を持たせて最後協力して grid を複数 worker で倒す
-        if self.rest_grid_ids.is_empty() {
-            return None;
-        }
+        // if self.rest_grid_ids.is_empty() {
+        //     return None;
+        // }
 
-        let (p, _) = self
-            .field
-            .bfs(
-                &self.workers[index],
-                Square::Surface,
-                Point::new(-1, -1),
-                &vec![],
-                None,
-                None,
-            )
-            .unwrap();
-        let grid_id = self.grids.grid_id_of(p);
-        self.rest_grid_ids.retain(|&id| id != grid_id);
+        // let (p, _) = self
+        //     .field
+        //     .bfs(
+        //         &self.workers[index],
+        //         Square::Surface,
+        //         Point::new(-1, -1),
+        //         &vec![],
+        //         None,
+        //         None,
+        //     )
+        //     .unwrap();
+        // let grid_id = self.grids.grid_id_of(p);
+        // self.rest_grid_ids.retain(|&id| id != grid_id);
 
-        Some(grid_id)
+        // Some(grid_id)
+        self.rest_grid_ids.pop()
     }
 
     fn one_worker_action(&mut self, index: usize, solution: &mut Vec<Vec<Action>>) {
