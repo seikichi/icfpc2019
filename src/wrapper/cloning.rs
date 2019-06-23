@@ -30,7 +30,8 @@ impl Grid {
                 {
                     continue;
                 }
-                initial_points.push(Point::new(x as i32, y as i32))
+                initial_points.push(Point::new(x as i32, y as i32));
+                break;
             }
         }
 
@@ -40,7 +41,7 @@ impl Grid {
             let mut que = std::collections::VecDeque::new();
             que.push_back(initial_points[i]);
             ques.push(que);
-            grids.push(Grid(vec![initial_points[i]]));
+            grids.push(Grid(vec![]));
         }
 
         let mut visited = vec![vec![false; field.width()]; field.height()];
@@ -58,10 +59,10 @@ impl Grid {
                     for d in 0..4 {
                         let npos = cur + Point::new(dx[d], dy[d]);
 
-                        if visited[npos.y as usize][npos.x as usize] {
+                        if !field.in_map(npos) {
                             continue;
                         }
-                        if !field.in_map(npos) {
+                        if visited[npos.y as usize][npos.x as usize] {
                             continue;
                         }
                         let s = field[npos.y as usize][npos.x as usize];
