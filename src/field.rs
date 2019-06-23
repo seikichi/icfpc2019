@@ -291,11 +291,11 @@ impl Field {
         queue.push_back((current, 0));
 
         let mut visited = vec![vec![-1; w]; h];
-        let mut parents = vec![vec![Point::new(0, 0); w]; h];
-        visited[current.y as usize][current.x as usize] = 0;
+        let mut parents = vec![vec![Point::new(-1, -1); w]; h];
         for p in lock.iter() {
             visited[p.y as usize][p.x as usize] = -2;
         }
+        visited[current.y as usize][current.x as usize] = 0;
 
         while let Some((p, cost)) = queue.pop_front() {
             let y = p.y as usize;
@@ -319,6 +319,8 @@ impl Field {
                     } else if p.x < ppos.x {
                         Action::MoveLeft
                     } else {
+                        eprintln!("{:?} {:?} {:?}", p, ppos, worker);
+                        assert!(visited[p.y as usize][p.x as usize] >= 0);
                         panic!("wrong move");
                     };
                     p = ppos;
