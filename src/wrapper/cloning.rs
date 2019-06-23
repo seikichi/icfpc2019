@@ -176,6 +176,39 @@ impl CloningWrapper {
 }
 
 #[test]
+fn test_cloning_nobooster() {
+    // .....
+    // ..#..
+    // ..#..
+    // ..#..
+    // s....
+
+    let map = Map(vec![
+        Point::new(0, 0),
+        Point::new(5, 0),
+        Point::new(5, 5),
+        Point::new(0, 5),
+    ]);
+    let obstacles = vec![Map(vec![
+        Point::new(2, 1),
+        Point::new(3, 1),
+        Point::new(3, 4),
+        Point::new(2, 4),
+    ])];
+    let boosters = vec![];
+    let point = Point::new(0, 0);
+    let task = Task {
+        point,
+        map,
+        obstacles,
+        boosters,
+    };
+
+    let mut wrapper = CloningWrapper::new(&task);
+    let _solution = wrapper.wrap(&task);
+}
+
+#[test]
 fn test_cloning_nocloning() {
     // .X..
     // .**.
