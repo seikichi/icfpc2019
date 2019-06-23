@@ -263,7 +263,7 @@ fn test_cloning_two_cloning() {
         boosters,
     };
 
-    let mut wrapper = CloningWrapper::new(&task);
+    let mut wrapper = CloningWrapper::new(&task, 1 << 30);
     let _solution = wrapper.wrap(&task);
 }
 
@@ -297,7 +297,7 @@ fn test_cloning_nocloning() {
         boosters,
     };
 
-    let mut wrapper = CloningWrapper::new(&task);
+    let mut wrapper = CloningWrapper::new(&task, 1 << 30);
     let _solution = wrapper.wrap(&task);
 }
 
@@ -332,6 +332,6 @@ fn test_cloning_with_cloning() {
         boosters,
     };
 
-    let mut wrapper = CloningWrapper::new(&task);
+    let mut wrapper = CloningWrapper::new(&task, 1 << 30);
     let _solution = wrapper.wrap(&task);
 }
