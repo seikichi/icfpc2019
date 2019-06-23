@@ -114,14 +114,12 @@ function postMessageToSlack(message) {
 
       const solutionResult = await utils.checkSolution(inTaskPath, outSolutionPath);
       if (!solutionResult.success) {
-        console.log(`Solution Chcker Failed: ${JSON.stringify(solutionResult)}`);
-        continue;
+        throw new Error(`Solution Checker Failed: block=${block}, ${JSON.stringify(solutionResult)}`);
       }
 
       const puzzleResult = await utils.checkPuzzle(inPuzzlePath, outTaskPath);
       if (!puzzleResult.success) {
-        console.log(`Puzzle Chcker Failed: ${JSON.stringify(puzzleResult)}`);
-        continue;
+        throw new Error(`Puzzle Checker Failed: block=${block}, ${JSON.stringify(puzzleResult)}`);
       }
       console.log("LGTM, let's submit!");
 
