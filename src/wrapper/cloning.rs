@@ -311,8 +311,9 @@ impl CloningWrapper {
         // 使う場合は終点のロックをとったままgoalを書き換える
         // 次のターンにactionsが空になるので直ぐにGoalが再計算される
         let action_cnt = self.worker_goals[index].actions.len();
+        let r_cnt = self.rng.gen::<usize>() % 25 + 5;
         let r = self.rng.gen::<usize>() % 2;
-        if action_cnt > 40 && r == 0 {
+        if action_cnt > r_cnt && r == 0 {
             let target_p = self.worker_goals[index].p;
             if self.booster_cnts[BoosterCode::Drill as usize] > 0
                 && self.workers[index].drill_time <= 0
