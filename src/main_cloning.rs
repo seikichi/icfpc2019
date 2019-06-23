@@ -10,6 +10,7 @@ fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
     let mut opts = Options::new();
     opts.optopt("b", "", "set boosters", "BOOSTERS");
+    opts.optopt("c", "", "counts", "COUNTS");
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
         Err(f) => panic!(f.to_string()),
@@ -21,6 +22,10 @@ fn main() -> io::Result<()> {
             .collect(),
         None => vec![],
     };
+    let count = match matches.opt_str("c") {
+        Some(c) => c.parse::<usize>().expect("failed to parse -c"),
+        None => 1,
+    };
 
     let mut buffer = String::new();
     io::stdin().read_to_string(&mut buffer)?;
@@ -29,13 +34,16 @@ fn main() -> io::Result<()> {
     let mut wrapper = CloningWrapper::new(&task, &boosters, 1 << 30, 1);
     let mut best_solution = wrapper.wrap(&task);
     eprintln!("{} {}", 1 << 30, best_solution.step());
-    let random_move_ratios = vec![10, 100, 1000, 10000];
-    for &r in random_move_ratios.iter() {
-        let mut wrapper = CloningWrapper::new(&task, &boosters, r, 1);
-        let solution = wrapper.wrap(&task);
-        eprintln!("{} {}", r, solution.step());
-        if solution.step() < best_solution.step() {
-            best_solution = solution;
+
+    for _ in 0..count {
+        let random_move_ratios = vec![10, 100, 1000, 10000, 1 << 30];
+        for &r in random_move_ratios.iter() {
+            let mut wrapper = CloningWrapper::new(&task, &boosters, r, 1);
+            let solution = wrapper.wrap(&task);
+            eprintln!("{} {}", r, solution.step());
+            if solution.step() < best_solution.step() {
+                best_solution = solution;
+            }
         }
     }
     println!("{}", best_solution.to_string());
