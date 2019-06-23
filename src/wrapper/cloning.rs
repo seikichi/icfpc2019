@@ -284,7 +284,7 @@ impl CloningWrapper {
         let lock = self.get_lock(index);
         if let Some((p, mut actions)) =
             self.field
-                .bfs(&self.workers[index], target, target_point, &lock)
+                .bfs(&self.workers[index], target, target_point, &lock, false)
         {
             if kind == GoalKind::Cloning {
                 actions.push(Action::Cloning);

@@ -299,6 +299,7 @@ impl Field {
         target: Square,
         target_point: Point,
         lock: &Vec<Point>,
+        using_teleport: bool
     ) -> Option<(Point, Vec<Action>)> {
         let w = self.width();
         let h = self.height();
@@ -313,6 +314,17 @@ impl Field {
             visited[p.y as usize][p.x as usize] = -2;
         }
         visited[current.y as usize][current.x as usize] = 0;
+        if using_teleport {
+            for &beacon_p in self.beacon_ps.iter() {
+                if visited[beacon_p.y as usize][beacon_p.x as usize] != -1 {
+                    // locked
+                    continue;
+                }
+                visited[beacon_p.y as usize][beacon_p.x as usize] = 1;
+                parents[beacon_p.y as usize][beacon_p.x as usize] = worker.p;
+                queue.push_back((beacon_p, 1));
+            }
+        }
 
         while let Some((p, cost)) = queue.pop_front() {
             let y = p.y as usize;
@@ -327,7 +339,11 @@ impl Field {
                 while visited[p.y as usize][p.x as usize] != 0 {
                     let ppos = parents[p.y as usize][p.x as usize];
 
-                    let a = if p.y > ppos.y {
+                    let a = if using_teleport
+                               && self.get_booster_square(p) == (Square::Booster { code: BoosterCode::Beacon })
+                               && ppos == worker.p {
+                        Action::Teleports { x: p.x, y: p.y }
+                    } else if p.y > ppos.y {
                         Action::MoveUp
                     } else if p.y < ppos.y {
                         Action::MoveDown
