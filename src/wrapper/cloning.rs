@@ -83,6 +83,7 @@ enum BigGoalKind {
     MoveToGrid,
     FillGrid,
     Nothing,
+    Stop,
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
@@ -109,29 +110,47 @@ struct WorkerGoal {
 impl WorkerGoal {
     fn new(kind: GoalKind, p: Point, actions: Vec<Action>) -> WorkerGoal {
         WorkerGoal {
-            big_kind: BigGoalKind::FillGrid, // TODO
+            big_kind: BigGoalKind::FillGrid,
             kind,
             p,
             actions: VecDeque::from_iter(actions.into_iter()),
-            gird: None,
+            grid: None,
         }
     }
     fn nop() -> WorkerGoal {
         WorkerGoal {
-            big_kind: BigGoalKind::Nothing, // TODO
+            big_kind: BigGoalKind::Nothing,
             kind: GoalKind::Nothing,
             p: Point::new(0, 0),
             actions: VecDeque::from_iter([Action::DoNothing].iter().cloned()),
-            gird: None,
+            grid: None,
         }
     }
     fn random(l: usize) -> WorkerGoal {
         WorkerGoal {
-            big_kind: BigGoalKind::FillGrid, // TODO
+            big_kind: BigGoalKind::FillGrid,
             kind: GoalKind::RandomMove,
             p: Point::new(0, 0),
             actions: VecDeque::from_iter(vec![Action::DoNothing; l].iter().cloned()),
-            gird: None,
+            grid: None,
+        }
+    }
+    fn stop() -> WorkerGoal {
+        WorkerGoal {
+            big_kind: BigGoalKind::Stop,
+            kind: GoalKind::Nothing,
+            p: Point::new(0, 0),
+            actions: VecDeque::new(),
+            grid: None,
+        }
+    }
+    fn move_to_grid(p: Point, actions: Vec<Action>, grid: Grid) -> WorkerGoal {
+        WorkerGoal {
+            big_kind: BigGoalKind::MoveToGrid,
+            kind: GoalKind::Nothing,
+            p,
+            actions: VecDeque::from_iter(actions.into_iter()),
+            grid: Some(grid),
         }
     }
 }
@@ -257,6 +276,13 @@ impl CloningWrapper {
         return None;
     }
 
+    fn pop_grid(&mut self) -> Option<Grid> {
+        // TODO
+        // - 近いやつにする
+        // - pop じゃなくて flag を持たせて最後協力して grid を複数 worker で倒す
+        self.grids.pop()
+    }
+
     fn one_worker_action(&mut self, index: usize, solution: &mut Vec<Vec<Action>>) {
         self.field
             .get_booster(&mut self.workers[index], &mut self.booster_cnts);
@@ -265,6 +291,36 @@ impl CloningWrapper {
         // Nothing -> Grid を決める
         // MoveToGrid -> Grid への移動を決めて終わり (BFS)
         // FillGrid -> 以下の処理
+        if self.worker_goals[index].big_kind == BigGoalKind::Nothing {
+            match self.pop_grid() {
+                None => self.worker_goals[index] = WorkerGoal::stop(),
+                Some(grid) => {
+                    let target = Square::Surface;
+                    let target_point = grid.0[0];
+                    if let Some((p, mut actions)) =
+                        self.field
+                            .bfs(&self.workers[index], target, target_point, &vec![])
+                    {
+                        self.worker_goals[index] = WorkerGoal::move_to_grid(p, actions, grid);
+                    } else {
+                        panic!("Faild to move grid");
+                    }
+                }
+            }
+        }
+        if self.worker_goals[index].big_kind == BigGoalKind::Stop {
+            solution[index].push(Action::DoNothing);
+            return;
+        }
+        if self.worker_goals[index].big_kind == BigGoalKind::MoveToGrid {
+            let action = self.worker_goals[index].actions.pop_front().unwrap();
+            self.workers[index].act(action, &mut self.field, &mut self.booster_cnts);
+            if self.worker_goals[index].actions.len() == 0 {
+                let l = self.rng.gen::<usize>() % 2 + 1;
+                self.worker_goals[index] = WorkerGoal::random(l);
+            }
+            return;
+        }
 
         // ランダムな確率で今やる事を忘れてランダムムーブさせる
         if self.rng.gen::<usize>() % self.random_move_ratio == 0 {
