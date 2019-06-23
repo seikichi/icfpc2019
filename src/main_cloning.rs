@@ -26,12 +26,12 @@ fn main() -> io::Result<()> {
     io::stdin().read_to_string(&mut buffer)?;
 
     let task = Task::from(&buffer);
-    let mut wrapper = CloningWrapper::new(&task, &boosters, 1 << 30);
+    let mut wrapper = CloningWrapper::new(&task, &boosters, 1 << 30, 1);
     let mut best_solution = wrapper.wrap(&task);
     eprintln!("{} {}", 1 << 30, best_solution.step());
     let random_move_ratios = vec![10, 100, 1000, 10000];
     for &r in random_move_ratios.iter() {
-        let mut wrapper = CloningWrapper::new(&task, &boosters, r);
+        let mut wrapper = CloningWrapper::new(&task, &boosters, r, 1);
         let solution = wrapper.wrap(&task);
         eprintln!("{} {}", r, solution.step());
         if solution.step() < best_solution.step() {

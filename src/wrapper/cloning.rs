@@ -59,6 +59,7 @@ pub struct CloningWrapper {
     worker_goals: Vec<WorkerGoal>,
     next_turn_workers: Vec<Worker>, // Cloneされた直後のWorker、次のターンからworkersに入る
     rng: ThreadRng,
+    // rng: SmallRng,
     random_move_ratio: usize,
 }
 
@@ -89,7 +90,12 @@ impl Wrapper for CloningWrapper {
 }
 
 impl CloningWrapper {
-    pub fn new(task: &Task, boosters: &Vec<BoosterCode>, random_move_ratio: usize) -> Self {
+    pub fn new(
+        task: &Task,
+        boosters: &Vec<BoosterCode>,
+        random_move_ratio: usize,
+        _seed: usize, // for debug
+    ) -> Self {
         let mut workers = vec![Worker::new(task.point)];
         let mut field = Field::from(task);
         let mut booster_cnts = vec![0; 10];
@@ -97,6 +103,12 @@ impl CloningWrapper {
             booster_cnts[*b as usize] += 1;
         }
         field.update_surface(&mut workers[0]);
+        let rng = rand::thread_rng();
+        // let mut seed_array = [0; 16];
+        // for i in 0..4 {
+        //     seed_array[i] = (seed >> (8 * i)) as u8;
+        // }
+        // let rng = SmallRng::from_seed(seed_array);
         CloningWrapper {
             task: task.clone(),
             workers,
@@ -104,7 +116,7 @@ impl CloningWrapper {
             field,
             worker_goals: vec![WorkerGoal::nop()],
             next_turn_workers: vec![],
-            rng: rand::thread_rng(),
+            rng: rng,
             random_move_ratio: random_move_ratio,
         }
     }
@@ -187,6 +199,10 @@ impl CloningWrapper {
         if self.worker_goals[index].kind == GoalKind::RandomMove {
             action = self.get_random_action(index);
         }
+        // eprintln!(
+        //     "{} {:?} {:?}\n{:?}",
+        //     index, action, self.worker_goals[index], self.workers[index]
+        // );
         self.workers[index].act(action, &mut self.field, &mut self.booster_cnts);
         if action == Action::Cloning {
             // Cloneの作成

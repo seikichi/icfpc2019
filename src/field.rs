@@ -32,6 +32,7 @@ impl Worker {
             };
             if iter == 0 && !movable {
                 eprintln!("{:?} {:?}", self, p);
+                field.print(self.p.x as usize - 2, self.p.y as usize - 2, 4, 4);
                 panic!("can't move!")
             }
             if !movable {
@@ -269,9 +270,9 @@ impl Field {
                 } else {
                     self.booster_field[y][x]
                 };
-                print!("{}", square.get_char());
+                eprint!("{}", square.get_char());
             }
-            println!("");
+            eprintln!("");
         }
     }
 
@@ -340,12 +341,22 @@ impl Field {
             let dx = vec![0, 0, 1, -1];
             'outer_loop: for dir in 0..4 {
                 let mut np = p;
-                for _d in 0..move_distance {
+                for d in 0..move_distance {
                     np.x += dx[dir];
                     np.y += dy[dir];
                     let movable = if drill {
                         self.in_map(np)
                     } else {
+                        if d == 1
+                            && 0 <= np.x
+                            && np.x < self.width() as i32
+                            && 0 <= np.y
+                            && np.y < self.height() as i32
+                            && visited[np.y as usize][np.x as usize] != -1
+                        {
+                            // ドリルが終わった直後にfastで掘った壁にぶつかろうとした場合
+                            continue 'outer_loop;
+                        }
                         self.movable(np)
                     };
                     if !movable {
