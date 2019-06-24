@@ -76,7 +76,7 @@ function postMessageToSlack(message) {
 
     try {
       const { block, puzzle, task, excluded, block_ts } = (await getblockinfo()).result;
-      const restSec = block_ts + 15 * 60 - (Date.new() / 1000);
+      const restSec = block_ts + 15 * 60 - (new Date() / 1000);
       if (restSec <= 0) {
         continue;
       }
