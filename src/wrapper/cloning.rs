@@ -122,6 +122,36 @@ impl CloningWrapper {
             solution: vec![vec![]],
         }
     }
+
+    pub fn wrap_one_step(&mut self) {
+        for i in 0..self.workers.len() {
+            self.one_worker_action(i);
+        }
+        for w in self.next_turn_workers.iter() {
+            self.workers.push(w.clone());
+            self.worker_goals.push(WorkerGoal::new(
+                GoalKind::Rotate,
+                Point::new(0, 0),
+                vec![Action::TurnCW],
+            ));
+            self.solution.push(vec![]);
+        }
+        self.next_turn_workers = vec![];
+        // println!("{:?}", self.workers);
+        // println!("{:?}", self.worker_goals);
+        // self.field.print(0, 0, 40, 40);
+    }
+
+    pub fn is_finished(&self) -> bool {
+        self.field.is_finished()
+    }
+
+    pub fn get_solution(&self) -> Solution {
+        assert!(self.is_finished());
+        eprintln!("{:?}", self.booster_cnts);
+        return Solution(self.solution.clone());
+    }
+
     // cloning boosterがあって他の人がcloningしようとしてなければやるべき
     fn should_cloning(&self, index: usize) -> bool {
         if self.field.rest_booster_cnts[BoosterCode::MysteriousPoint as usize] == 0
@@ -296,9 +326,12 @@ impl CloningWrapper {
                 .bfs(&self.workers[index], Square::Unknown, p, &vec![], true)
                 .unwrap();
             assert!(p == t_p);
-            assert!(t_actions.len() <= actions.len());
-            p = t_p;
-            actions = t_actions;
+            // assert!(t_actions.len() <= actions.len());
+            if t_actions.len() < actions.len() {
+                // fast, drillの時に経路の計算がおかしくて遠回りになるケースがあるのでassertは仕込まない
+                p = t_p;
+                actions = t_actions;
+            }
             if kind == GoalKind::Cloning {
                 actions.push(Action::Cloning);
             }
