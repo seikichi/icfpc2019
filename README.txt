@@ -5,6 +5,8 @@
 - @qwerty__
 - @seikichi
 
+Email: kondo.seikichi@gmail.com
+
 ## Requirements
 
 - Rust: 1.35.0
@@ -17,6 +19,8 @@
 ```
 
 ## How to Run (Wrapper)
+
+Beam Search AI!!!!!!!!!
 
 ```sh
 > cargo run --bin main_beam --release < prob-XXX.desc > prob-XXX.sol
