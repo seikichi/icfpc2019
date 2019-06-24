@@ -58,6 +58,16 @@ impl Worker {
             }
             Action::AttachFastWheels => booster_cnts[BoosterCode::FastWheels as usize] > 0,
             Action::AttachDrill => booster_cnts[BoosterCode::Drill as usize] > 0,
+            Action::InstallBeacon => {
+                booster_cnts[BoosterCode::Teleport as usize] > 0
+                && field.booster_field[self.p.y as usize][self.p.x as usize] == Square::Unknown
+            }
+            Action::Teleports { x, y } => {
+                field.get_booster_square(Point::new(x, y))
+                    == (Square::Booster {
+                        code: BoosterCode::Beacon
+                    })
+            }
             Action::Cloning => {
                 booster_cnts[BoosterCode::Cloning as usize] > 0
                     && field.booster_field[self.p.y as usize][self.p.x as usize]
@@ -65,7 +75,6 @@ impl Worker {
                             code: BoosterCode::MysteriousPoint,
                         }
             }
-            _ => unimplemented!(),
         }
     }
     pub fn act(&mut self, action: Action, field: &mut Field, booster_cnts: &mut Vec<usize>) {

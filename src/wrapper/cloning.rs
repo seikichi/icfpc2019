@@ -245,6 +245,13 @@ impl CloningWrapper {
         if self.is_already_wrapped_goal(index) {
             self.worker_goals[index] = WorkerGoal::nop();
         }
+        if self.worker_goals[index].actions.len() > 0 {
+            let action = self.worker_goals[index].actions[0];
+            if !self.workers[index].can_act(action, &self.field, &self.booster_cnts) {
+                // 自分がfastでほかの人がdrillとかで想定外の事態が発生して行動できない操作があった場合は考え直す
+                self.worker_goals[index] = WorkerGoal::nop();
+            }
+        }
         // GoalとActionを決める
         if self.worker_goals[index].kind == GoalKind::Nothing {
             self.decide_goal_and_action(index);
