@@ -9,7 +9,7 @@ const publicId = '99';
 const wrapper = path.resolve('target/release/main_cloning');
 const puzzler = path.resolve('target/release/puzzler');
 
-const SOLVER_TRY_COUNT = 5;
+const SOLVER_TRY_COUNT = 3;
 
 const webhookUrl = process.env['ICFPC2019_SLACK_WEBHOOK_URL'];
 if (!webhookUrl) {
