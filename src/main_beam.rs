@@ -54,7 +54,7 @@ fn main() -> io::Result<()> {
         eprintln!("{}", _s);
         let r = rng.gen::<usize>() % wrappers.len();
         let mut wrapper = wrappers[r].1.clone();
-        let random_move_ratios = vec![10, 100, 1000, 10000];
+        let random_move_ratios = vec![10, 100, 1000, 10000, 1 << 30];
         let r = rng.gen::<usize>() % random_move_ratios.len();
         wrapper.random_move_ratio = random_move_ratios[r];
         small_step(&mut wrapper, max_step_size);
