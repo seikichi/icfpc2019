@@ -1,4 +1,4 @@
-# 花脊山の家
+# 花脊山の家 (Hanase Yama no Ie)
 
 - @cos65535
 - @nojima
@@ -10,20 +10,32 @@
 - Rust: 1.35.0
 - Cargo: 1.35.0
 
-## How to Build
+## How to Build (Wrapper)
 
 ```sh
 > cargo build --release
 ```
 
-## How to Run
+## How to Run (Wrapper)
 
 ```sh
-> cargo run --bin main_cloning --release < prob-XXX.desc > prob-XXX.sol
+> cargo run --bin main_beam --release < prob-XXX.desc > prob-XXX.sol
 ```
 
 or
 
 ```sh
-> cargo run --bin main --release < prob-XXX.desc > prob-XXX.sol
+> cargo run --bin main_beam --release -- -b C < prob-XXX.desc > prob-XXX.sol # with initial boosters
+```
+
+## How to Build (Puzzle Solver)
+
+```sh
+> cargo build --release
+```
+
+## How to Run (Puzzle Solver)
+
+```sh
+> cargo run --bin puzzler --release < puzzle.cond > task.desc
 ```
