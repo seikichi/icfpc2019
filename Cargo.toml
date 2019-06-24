@@ -21,6 +21,10 @@ name = "main_cloning"
 path = "src/main_cloning.rs"
 
 [[bin]]
+name = "main_beam"
+path = "src/main_beam.rs"
+
+[[bin]]
 name = "visualize"
 path = "src/visualize.rs"
 

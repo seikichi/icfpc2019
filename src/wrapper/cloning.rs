@@ -52,6 +52,7 @@ impl WorkerGoal {
     }
 }
 
+#[derive(Clone)]
 pub struct CloningWrapper {
     task: Task,
     workers: Vec<Worker>,
@@ -61,7 +62,7 @@ pub struct CloningWrapper {
     next_turn_workers: Vec<Worker>, // Cloneされた直後のWorker、次のターンからworkersに入る
     rng: ThreadRng,
     // rng: SmallRng,
-    random_move_ratio: usize,
+    pub random_move_ratio: usize,
     solution: Vec<Vec<Action>>,
 }
 
@@ -109,6 +110,9 @@ impl CloningWrapper {
     }
 
     pub fn wrap_one_step(&mut self) {
+        if self.is_finished() {
+            return;
+        }
         for i in 0..self.workers.len() {
             self.one_worker_action(i);
         }
