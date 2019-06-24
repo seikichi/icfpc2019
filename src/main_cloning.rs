@@ -35,10 +35,11 @@ fn main() -> io::Result<()> {
     let mut best_solution = wrapper.wrap(&task);
     eprintln!("{} {}", 1 << 30, best_solution.step());
 
-    for _ in 0..count {
+    for _s in 0..count {
+        eprintln!("{}", _s);
         let random_move_ratios = vec![10, 100, 1000, 10000, 1 << 30];
         for &r in random_move_ratios.iter() {
-            let mut wrapper = CloningWrapper::new(&task, &boosters, r, 1);
+            let mut wrapper = CloningWrapper::new(&task, &boosters, r, _s);
             let solution = wrapper.wrap(&task);
             eprintln!("{} {}", r, solution.step());
             if solution.step() < best_solution.step() {

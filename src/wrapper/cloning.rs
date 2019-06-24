@@ -107,7 +107,7 @@ impl CloningWrapper {
         let rng = rand::thread_rng();
         // let mut seed_array = [0; 16];
         // for i in 0..4 {
-        //     seed_array[i] = (seed >> (8 * i)) as u8;
+        //     seed_array[i] = (_seed >> (8 * i)) as u8;
         // }
         // let rng = SmallRng::from_seed(seed_array);
         CloningWrapper {
