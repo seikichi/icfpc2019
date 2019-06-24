@@ -62,14 +62,14 @@ pub struct CloningWrapper {
     rng: ThreadRng,
     // rng: SmallRng,
     random_move_ratio: usize,
+    solution : Vec<Vec<Action>>,
 }
 
 impl Wrapper for CloningWrapper {
     fn wrap(&mut self, _task: &Task) -> Solution {
-        let mut solution = vec![vec![]];
         while !self.field.is_finished() {
             for i in 0..self.workers.len() {
-                self.one_worker_action(i, &mut solution);
+                self.one_worker_action(i);
             }
             for w in self.next_turn_workers.iter() {
                 self.workers.push(w.clone());
@@ -78,7 +78,7 @@ impl Wrapper for CloningWrapper {
                     Point::new(0, 0),
                     vec![Action::TurnCW],
                 ));
-                solution.push(vec![]);
+                self.solution.push(vec![]);
             }
             self.next_turn_workers = vec![];
             // println!("{:?}", self.workers);
@@ -86,7 +86,7 @@ impl Wrapper for CloningWrapper {
             // self.field.print(0, 0, 40, 40);
         }
         eprintln!("{:?}", self.booster_cnts);
-        return Solution(solution);
+        return Solution(self.solution.clone());
     }
 }
 
@@ -119,6 +119,7 @@ impl CloningWrapper {
             next_turn_workers: vec![],
             rng: rng,
             random_move_ratio: random_move_ratio,
+            solution: vec![vec![]],
         }
     }
     // cloning boosterがあって他の人がcloningしようとしてなければやるべき
@@ -202,7 +203,7 @@ impl CloningWrapper {
         return true;
     }
 
-    fn one_worker_action(&mut self, index: usize, solution: &mut Vec<Vec<Action>>) {
+    fn one_worker_action(&mut self, index: usize) {
         self.field
             .get_booster(&mut self.workers[index], &mut self.booster_cnts);
         // ランダムな確率で今やる事を忘れてランダムムーブさせる
@@ -233,7 +234,7 @@ impl CloningWrapper {
             self.next_turn_workers
                 .push(Worker::new(self.workers[index].p));
         }
-        solution[index].push(action);
+        self.solution[index].push(action);
         if self.worker_goals[index].actions.len() == 0 {
             self.worker_goals[index] = WorkerGoal::nop();
         }
