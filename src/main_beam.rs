@@ -63,7 +63,7 @@ fn main() -> io::Result<()> {
         wrapper.random_move_ratio = 1 << 30;
         let solution = full_step(&task, &mut wrapper);
         eprintln!("{} {}", _s, solution.step());
-        if !wrapper.is_finished() {
+        if !copy_wrapper.is_finished() {
             wrappers.push((solution.step(), copy_wrapper));
         }
         if solution.step() < best_solution.step() {
