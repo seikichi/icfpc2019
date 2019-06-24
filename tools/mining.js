@@ -98,26 +98,37 @@ function postMessageToSlack(message) {
 
       postMessageToSlack(`Start: block = ${block}`);
 
+      let wrapperProcess = null;
       const wrapperPromise = new Promise((resolve, reject) => {
-        exec(`${wrapper} -c ${count} < ${inTaskPath} > ${outSolutionPath}`, error => {
+        wrapperProcess = exec(`${wrapper} -c ${count} < ${inTaskPath} > ${outSolutionPath}`, error => {
           if (error) {
             reject(error);
             return;
           }
-          resolve();
+          resolve(true);
         });
       });
+      let puzzleProcess = null;
       const puzzlePromise = new Promise((resolve, reject) => {
-        exec(`${puzzler} < ${inPuzzlePath} > ${outTaskPath}`, error => {
+        puzzleProcess = exec(`${puzzler} < ${inPuzzlePath} > ${outTaskPath}`, error => {
           if (error) {
             reject(error);
             return;
           }
-          resolve();
+          resolve(true);
         });
       });
-      await wrapperPromise;
-      await puzzlePromise;
+      const wrapperLimit = new Promise(resolve => setTimeout(() => resolve(false), 15 * 60 * 1000));
+      const puzzleLimit = new Promise(resolve => setTimeout(() => resolve(false), 15 * 60 * 1000));
+
+      const wrapperSuccess = await Promise.race([wrapperPromise, wrapperLimit]);
+      const puzzleSuccess = await Promise.race([puzzlePromise, puzzleLimit]);
+      if (!wrapperSuccess || !puzzleSuccess) {
+        console.log(`Timeout!! wrapper success = ${wrapperSuccess}, puzzle success = ${puzzleSuccess}`);
+        if (!wrapperSuccess) { wrapperProcess.kill(9); }
+        if (!puzzleSuccess) { puzzleProcess.kill(9); }
+        throw new Error(`Timeout!! wrapper success = ${wrapperSuccess}, puzzle success = ${puzzleSuccess}`);
+      }
 
       const solutionResult = await utils.checkSolution(inTaskPath, outSolutionPath);
       if (!solutionResult.success) {
