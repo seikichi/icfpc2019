@@ -62,28 +62,13 @@ pub struct CloningWrapper {
     rng: ThreadRng,
     // rng: SmallRng,
     random_move_ratio: usize,
-    solution : Vec<Vec<Action>>,
+    solution: Vec<Vec<Action>>,
 }
 
 impl Wrapper for CloningWrapper {
     fn wrap(&mut self, _task: &Task) -> Solution {
-        while !self.field.is_finished() {
-            for i in 0..self.workers.len() {
-                self.one_worker_action(i);
-            }
-            for w in self.next_turn_workers.iter() {
-                self.workers.push(w.clone());
-                self.worker_goals.push(WorkerGoal::new(
-                    GoalKind::Rotate,
-                    Point::new(0, 0),
-                    vec![Action::TurnCW],
-                ));
-                self.solution.push(vec![]);
-            }
-            self.next_turn_workers = vec![];
-            // println!("{:?}", self.workers);
-            // println!("{:?}", self.worker_goals);
-            // self.field.print(0, 0, 40, 40);
+        while !self.is_finished() {
+            self.wrap_one_step();
         }
         eprintln!("{:?}", self.booster_cnts);
         return Solution(self.solution.clone());
@@ -105,7 +90,7 @@ impl CloningWrapper {
         }
         field.update_surface(&mut workers[0]);
         let rng = rand::thread_rng();
-        // let mut seed_array = [0; 16];
+        // let mut seed_array = [_seed as u8; 16];
         // for i in 0..4 {
         //     seed_array[i] = (_seed >> (8 * i)) as u8;
         // }
