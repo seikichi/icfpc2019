@@ -26,7 +26,6 @@ enum GoalKind {
     UseWheel,
     SetBeacon,
     Wrap,
-    Rotate,
     RandomMove,
     Nothing,
 }
@@ -108,7 +107,7 @@ pub struct CloningWrapper {
     grids: Grids,
     rest_grid_ids: Vec<i32>,
     pub random_move_ratio: usize,
-    solution: Vec<Vec<Action>>,
+    pub solution: Vec<Vec<Action>>,
 }
 
 impl Wrapper for CloningWrapper {
@@ -131,18 +130,19 @@ impl CloningWrapper {
         let mut workers = vec![Worker::new(task.point)];
         let mut field = Field::from(task);
         let mut booster_cnts = vec![0; 10];
+        // field.print(0, 0, 300, 300);
         for b in boosters {
             booster_cnts[*b as usize] += 1;
         }
-        let grid_num = 10; // TODO
-        let mut grids = Grids::from(&field, grid_num);
-        field.update_surface(&mut workers[0], &mut grids);
         let rng = rand::thread_rng();
         // let mut seed_array = [_seed as u8; 16];
         // for i in 0..4 {
         //     seed_array[i] = (_seed >> (8 * i)) as u8;
         // }
         // let rng = SmallRng::from_seed(seed_array);
+        let grid_num = field.rest_surface_cnt / 40 + 1;
+        let mut grids = Grids::from(&field, grid_num);
+        field.update_surface(&mut workers[0], &mut grids);
         CloningWrapper {
             task: task.clone(),
             workers,
@@ -168,7 +168,7 @@ impl CloningWrapper {
         for w in self.next_turn_workers.iter() {
             self.workers.push(w.clone());
             self.worker_goals.push(WorkerGoal::initialize());
-            solution.push(vec![]);
+            self.solution.push(vec![]);
         }
         self.next_turn_workers = vec![];
         // println!("{:?}", self.workers);
@@ -291,19 +291,20 @@ impl CloningWrapper {
                 Some(&self.grids),
                 None,
                 &locked_ids,
+                false,
             ) {
                 let grid_id_candidate = self.grids.grid_id_of(p);
-                eprintln!(
-                    "p {:?}, candidate: {}, rest_grid_id: {:?}",
-                    p, grid_id_candidate, self.rest_grid_ids
-                );
+                // eprintln!(
+                //     "p {:?}, candidate: {}, rest_grid_id: {:?}",
+                //     p, grid_id_candidate, self.rest_grid_ids
+                // );
                 // if !self.rest_grid_ids.contains(&grid_id_candidate) {
                 //     eprintln!("Grid already taken: {}", grid_id_candidate);
                 //     let mut grid = self.grids.get_grid(grid_id_candidate);
                 //     locked.append(&mut grid);
                 //     continue;
                 // } else {
-                eprintln!("Next grid: {}", grid_id_candidate);
+                // eprintln!("Next grid: {}", grid_id_candidate);
                 self.rest_grid_ids.retain(|&id| id != grid_id_candidate);
                 grid_id = Some(grid_id_candidate);
                 break;
@@ -316,9 +317,20 @@ impl CloningWrapper {
         grid_id
     }
 
-    fn one_worker_action(&mut self, index: usize, solution: &mut Vec<Vec<Action>>) {
+    fn one_worker_action(&mut self, index: usize) {
+        if self.solution[0].len() > 530 {
+            // eprintln!("");
+            // self.field.print(43, 43, 20, 20);
+        }
         self.field
             .get_booster(&mut self.workers[index], &mut self.booster_cnts);
+        if self.solution[0].len() > 530 {
+            // eprintln!("");
+            // eprintln!("{:?}", self.booster_cnts);
+            // eprintln!("{:?}", self.workers[index]);
+            // eprintln!("{:?}", self.worker_goals);
+            // eprintln!("{} {} {:?}\n{:?}", self.solution[0].len(), index, self.workers[index], self.worker_goals);
+        }
 
         // 大目標を見て...
         // Nothing -> Grid を決める
@@ -338,8 +350,8 @@ impl CloningWrapper {
                         Some(&self.grids),
                         Some(grid_id),
                         &vec![],
+                        false,
                     ) {
-                        // eprintln!("{:?}", actions);
                         self.worker_goals[index] = WorkerGoal::move_to_grid(p, actions, grid_id);
                     } else {
                         panic!("Faild to move grid");
@@ -349,7 +361,7 @@ impl CloningWrapper {
         }
         if self.worker_goals[index].big_kind == BigGoalKind::Stop {
             // eprintln!("Stop");
-            solution[index].push(Action::DoNothing);
+            self.solution[index].push(Action::DoNothing);
             return;
         }
         if self.worker_goals[index].big_kind == BigGoalKind::MoveToGrid {
@@ -361,7 +373,7 @@ impl CloningWrapper {
                 &mut self.booster_cnts,
                 &mut self.grids,
             );
-            solution[index].push(action);
+            self.solution[index].push(action);
             if self.worker_goals[index].actions.len() == 0 {
                 let l = self.rng.gen::<usize>() % 2 + 1;
                 self.worker_goals[index] =
@@ -374,6 +386,7 @@ impl CloningWrapper {
         if self.grids.is_finished(grid_id) {
             // eprintln!("grids.is_finished()");
             self.worker_goals[index] = WorkerGoal::initialize();
+            self.one_worker_action(index);
             return;
         }
         // ランダムな確率で今やる事を忘れてランダムムーブさせる
@@ -389,7 +402,7 @@ impl CloningWrapper {
             let action = self.worker_goals[index].actions[0];
             if !self.workers[index].can_act(action, &self.field, &self.booster_cnts) {
                 // 自分がfastでほかの人がdrillとかで想定外の事態が発生して行動できない操作があった場合は考え直す
-                self.worker_goals[index] = WorkerGoal::nop();
+                self.worker_goals[index] = WorkerGoal::nop(grid_id);
             }
         }
         // GoalとActionを決める
@@ -467,12 +480,12 @@ impl CloningWrapper {
         }
         if kind == GoalKind::SetBeacon {
             let actions = vec![Action::InstallBeacon];
-            self.worker_goals[index] = WorkerGoal::new(kind, target_point, actions);
+            self.worker_goals[index] = WorkerGoal::new(kind, target_point, actions, grid_id);
             return;
         }
         let lock = self.get_lock(index);
 
-        if let Some((p, mut actions)) = self.field.bfs(
+        if let Some((mut p, mut actions)) = self.field.bfs(
             &self.workers[index],
             target,
             target_point,

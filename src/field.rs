@@ -62,12 +62,12 @@ impl Worker {
             Action::AttachDrill => booster_cnts[BoosterCode::Drill as usize] > 0,
             Action::InstallBeacon => {
                 booster_cnts[BoosterCode::Teleport as usize] > 0
-                && field.booster_field[self.p.y as usize][self.p.x as usize] == Square::Unknown
+                    && field.booster_field[self.p.y as usize][self.p.x as usize] == Square::Unknown
             }
             Action::Teleports { x, y } => {
                 field.get_booster_square(Point::new(x, y))
                     == (Square::Booster {
-                        code: BoosterCode::Beacon
+                        code: BoosterCode::Beacon,
                     })
             }
             Action::Cloning => {
@@ -153,7 +153,7 @@ impl Worker {
         }
         self.fast_time -= 1;
         self.drill_time -= 1;
-        field.update_surface(self);
+        field.update_surface(self, grids);
     }
     fn check_manipulator_constraint(&self, p: Point) -> bool {
         let mut manipulators = self.manipulators.clone();
@@ -225,6 +225,7 @@ impl Grids {
 
     pub fn from(field: &Field, num: usize) -> Self {
         let mut rng = rand::thread_rng();
+        // let mut rng = SmallRng::from_seed([1; 16]);
         let mut initial_points: Vec<Point> = vec![];
         for _ in 0..num {
             loop {
@@ -293,12 +294,12 @@ impl Grids {
                 ids[p.y as usize][p.x as usize] = i as i32;
             }
         }
-        for y in (0..ids.len()).rev() {
-            for x in 0..ids[y].len() {
-                eprint!("{: >3}", ids[y][x]);
-            }
-            eprintln!("");
-        }
+        // for y in (0..ids.len()).rev() {
+        //     for x in 0..ids[y].len() {
+        //         eprint!("{: >3}", ids[y][x]);
+        //     }
+        //     eprintln!("");
+        // }
         Grids {
             grid_ids: ids,
             rest_surface_cnt,
@@ -437,10 +438,10 @@ impl Field {
                 if x >= self.width() {
                     break;
                 }
-                let square = if self[y][x] != Square::Unknown {
-                    self[y][x]
-                } else {
+                let square = if self.booster_field[y][x] != Square::Unknown {
                     self.booster_field[y][x]
+                } else {
+                    self[y][x]
                 };
                 eprint!("{}", square.get_char());
             }
@@ -457,7 +458,7 @@ impl Field {
         lock: &Vec<Point>,
         grids: Option<&Grids>,
         grid_id: Option<i32>,
-        ban_grid_id: &Vec<i32>
+        ban_grid_id: &Vec<i32>,
         using_teleport: bool,
     ) -> Option<(Point, Vec<Action>)> {
         let w = self.width();
@@ -500,8 +501,8 @@ impl Field {
                 grid_ok &= !grids.unwrap().in_grid(ban_id, &p);
             }
 
-            if grid_ok && (
-                    (target != Square::Unknown
+            if grid_ok
+                && ((target != Square::Unknown
                     && (self[y][x] == target || self.booster_field[y][x] == target))
                     || p == target_point)
             {

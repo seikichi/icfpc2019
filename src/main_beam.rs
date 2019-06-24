@@ -86,7 +86,7 @@ fn small_step(wrapper: &mut CloningWrapper, step: usize) {
         if wrapper.is_finished() {
             break;
         }
-        wrapper.wrap_one_step()
+        wrapper.wrap_one_step();
     }
 }
 

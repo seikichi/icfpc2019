@@ -48,6 +48,7 @@ fn main() -> io::Result<()> {
         }
     }
     eprintln!("{}", best_solution.step());
+    println!("{}", best_solution.to_string());
 
     Ok(())
 }
