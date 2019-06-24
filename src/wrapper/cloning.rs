@@ -219,16 +219,22 @@ impl CloningWrapper {
             return None;
         }
 
-        let mut locked = vec![];
         let mut grid_id = None;
         loop {
+            let mut locked_ids = vec![];
+            for i in 0..self.worker_goals.len() {
+                if let Some(id) = self.worker_goals[i].grid_id {
+                    locked_ids.push(id);
+                }
+            }
             if let Some((p, _)) = self.field.bfs(
                 &self.workers[index],
                 Square::Surface,
                 Point::new(-1, -1),
-                &locked,
+                &vec![],
+                Some(&self.grids),
                 None,
-                None,
+                &locked_ids,
             ) {
                 let grid_id_candidate = self.grids.grid_id_of(p);
                 eprintln!(
@@ -275,6 +281,7 @@ impl CloningWrapper {
                         &vec![],
                         Some(&self.grids),
                         Some(grid_id),
+                        &vec![],
                     ) {
                         // eprintln!("{:?}", actions);
                         self.worker_goals[index] = WorkerGoal::move_to_grid(p, actions, grid_id);
@@ -395,12 +402,13 @@ impl CloningWrapper {
             target,
             target_point,
             &lock,
+            Some(&self.grids),
             if kind == GoalKind::Wrap {
-                Some(&self.grids)
+                self.worker_goals[index].grid_id
             } else {
                 None
             },
-            self.worker_goals[index].grid_id,
+            &vec![],
         ) {
             if kind == GoalKind::Cloning {
                 actions.push(Action::Cloning);

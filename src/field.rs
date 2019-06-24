@@ -421,6 +421,7 @@ impl Field {
         lock: &Vec<Point>,
         grids: Option<&Grids>,
         grid_id: Option<i32>,
+        ban_grid_id: &Vec<i32>
     ) -> Option<(Point, Vec<Action>)> {
         let w = self.width();
         let h = self.height();
@@ -439,14 +440,22 @@ impl Field {
         while let Some((p, cost)) = queue.pop_front() {
             let y = p.y as usize;
             let x = p.x as usize;
-            if (grids.is_some()
-                && grid_id.is_some()
-                && grids.unwrap().in_grid(grid_id.unwrap(), &p)
-                && self[y][x] == target)
-                || (grids.is_none()
-                    && target != Square::Unknown
+
+            let mut grid_ok = if grid_id.is_none() {
+                true
+            } else {
+                assert!(grids.is_some());
+                let id = grid_id.unwrap();
+                grids.unwrap().in_grid(id, &p)
+            };
+            for &ban_id in ban_grid_id.iter() {
+                grid_ok &= !grids.unwrap().in_grid(ban_id, &p);
+            }
+
+            if grid_ok && (
+                    (target != Square::Unknown
                     && (self[y][x] == target || self.booster_field[y][x] == target))
-                || p == target_point
+                    || p == target_point)
             {
                 let mut p = p;
                 let end_p = Point::new(x as i32, y as i32);
