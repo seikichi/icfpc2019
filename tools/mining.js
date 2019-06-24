@@ -75,8 +75,12 @@ function postMessageToSlack(message) {
     await new Promise(resolve => setTimeout(resolve, 10 * 1000));
 
     try {
-      const { block, puzzle, task, excluded } = (await getblockinfo()).result;
-      console.log(`block = ${block}`);
+      const { block, puzzle, task, excluded, block_ts } = (await getblockinfo()).result;
+      const restSec = block_ts + 15 * 60 - (Date.new() / 1000);
+      if (restSec <= 0) {
+        continue;
+      }
+      console.log(`block = ${block} (start = ${block_ts}, rest = ${restSec} secs)`);
 
       if (last === block) {
         console.log(`This block is already submitted, skip.`);
@@ -118,8 +122,8 @@ function postMessageToSlack(message) {
           resolve(true);
         });
       });
-      const wrapperLimit = new Promise(resolve => setTimeout(() => resolve(false), 15 * 60 * 1000));
-      const puzzleLimit = new Promise(resolve => setTimeout(() => resolve(false), 15 * 60 * 1000));
+      const wrapperLimit = new Promise(resolve => setTimeout(() => resolve(false), restSec * 1000));
+      const puzzleLimit = new Promise(resolve => setTimeout(() => resolve(false), restSec * 1000));
 
       const wrapperSuccess = await Promise.race([wrapperPromise, wrapperLimit]);
       const puzzleSuccess = await Promise.race([puzzlePromise, puzzleLimit]);
