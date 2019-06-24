@@ -34,6 +34,7 @@ impl Worker {
             };
             if iter == 0 && !movable {
                 eprintln!("{:?} {:?}", self, p);
+                field.print(self.p.x as usize - 2, self.p.y as usize - 2, 4, 4);
                 panic!("can't move!")
             }
             if !movable {
@@ -59,6 +60,16 @@ impl Worker {
             }
             Action::AttachFastWheels => booster_cnts[BoosterCode::FastWheels as usize] > 0,
             Action::AttachDrill => booster_cnts[BoosterCode::Drill as usize] > 0,
+            Action::InstallBeacon => {
+                booster_cnts[BoosterCode::Teleport as usize] > 0
+                && field.booster_field[self.p.y as usize][self.p.x as usize] == Square::Unknown
+            }
+            Action::Teleports { x, y } => {
+                field.get_booster_square(Point::new(x, y))
+                    == (Square::Booster {
+                        code: BoosterCode::Beacon
+                    })
+            }
             Action::Cloning => {
                 booster_cnts[BoosterCode::Cloning as usize] > 0
                     && field.booster_field[self.p.y as usize][self.p.x as usize]
@@ -66,7 +77,6 @@ impl Worker {
                             code: BoosterCode::MysteriousPoint,
                         }
             }
-            _ => unimplemented!(),
         }
     }
     pub fn act(
@@ -89,9 +99,7 @@ impl Worker {
             Action::MoveRight => {
                 self.movement(Point::new(1, 0), field, grids);
             }
-            Action::DoNothing => {
-                field.update_surface(self, grids);
-            }
+            Action::DoNothing => {}
             Action::AttachManipulator { dx, dy } => {
                 booster_cnts[BoosterCode::ExtensionOfTheManipulator as usize] -= 1;
                 let p = Point::new(dx, dy);
@@ -107,6 +115,21 @@ impl Worker {
             Action::AttachDrill => {
                 booster_cnts[BoosterCode::Drill as usize] -= 1;
                 self.drill_time = 31;
+            }
+            Action::InstallBeacon => {
+                booster_cnts[BoosterCode::Teleport as usize] -= 1;
+                field.set_beacon(self.p);
+            }
+            Action::Teleports { x, y } => {
+                if field.get_booster_square(Point::new(x, y))
+                    != (Square::Booster {
+                        code: BoosterCode::Beacon,
+                    })
+                {
+                    eprintln!("{:?} {} {}", self, x, y);
+                    panic!("Beacon is not set");
+                }
+                self.p = Point::new(x, y);
             }
             Action::Cloning => {
                 let mystery_point = Square::Booster {
@@ -126,10 +149,11 @@ impl Worker {
                 self.manipulators = self.manipulators.iter().map(|p| p.rotate(3)).collect();
                 self.cw_rotation_count = (self.cw_rotation_count + 3) % 4;
             }
-            _ => unimplemented!(),
+            // _ => unimplemented!(),
         }
         self.fast_time -= 1;
         self.drill_time -= 1;
+        field.update_surface(self);
     }
     fn check_manipulator_constraint(&self, p: Point) -> bool {
         let mut manipulators = self.manipulators.clone();
@@ -303,6 +327,7 @@ impl Square {
                 BoosterCode::MysteriousPoint => 'X',
                 BoosterCode::Teleport => 'R',
                 BoosterCode::Cloning => 'C',
+                BoosterCode::Beacon => '!',
             },
             Square::Unknown => '.',
         }
@@ -315,6 +340,7 @@ pub struct Field {
     pub booster_field: Vec<Vec<Square>>,
     pub rest_booster_cnts: Vec<usize>,
     pub rest_surface_cnt: usize,
+    pub beacon_ps: Vec<Point>,
 }
 
 impl Field {
@@ -353,6 +379,15 @@ impl Field {
             self.wrap(p, grids);
         }
     }
+    pub fn set_beacon(&mut self, p: Point) {
+        if self.booster_field[p.y as usize][p.x as usize] != Square::Unknown {
+            panic!("Here has some object");
+        }
+        self.booster_field[p.y as usize][p.x as usize] = Square::Booster {
+            code: BoosterCode::Beacon,
+        };
+        self.beacon_ps.push(p);
+    }
     // p1, p2の視線がmovableかどうかチェックする
     pub fn none_block(&self, p1: Point, p2: Point) -> bool {
         let sx = std::cmp::min(p1.x, p2.x);
@@ -373,7 +408,8 @@ impl Field {
     }
     pub fn get_booster(&mut self, worker: &Worker, booster_cnts: &mut Vec<usize>) {
         match self.booster_field[worker.p.y as usize][worker.p.x as usize] {
-            Square::Booster { code } if code == BoosterCode::MysteriousPoint => {}
+            Square::Booster { code }
+                if code == BoosterCode::MysteriousPoint || code == BoosterCode::Beacon => {}
             Square::Booster { code } => {
                 self.rest_booster_cnts[code as usize] -= 1;
                 self.booster_field[worker.p.y as usize][worker.p.x as usize] = Square::Unknown;
@@ -406,9 +442,9 @@ impl Field {
                 } else {
                     self.booster_field[y][x]
                 };
-                print!("{}", square.get_char());
+                eprint!("{}", square.get_char());
             }
-            println!("");
+            eprintln!("");
         }
     }
 
@@ -422,6 +458,7 @@ impl Field {
         grids: Option<&Grids>,
         grid_id: Option<i32>,
         ban_grid_id: &Vec<i32>
+        using_teleport: bool,
     ) -> Option<(Point, Vec<Action>)> {
         let w = self.width();
         let h = self.height();
@@ -436,6 +473,17 @@ impl Field {
             visited[p.y as usize][p.x as usize] = -2;
         }
         visited[current.y as usize][current.x as usize] = 0;
+        if using_teleport {
+            for &beacon_p in self.beacon_ps.iter() {
+                if visited[beacon_p.y as usize][beacon_p.x as usize] != -1 {
+                    // locked
+                    continue;
+                }
+                visited[beacon_p.y as usize][beacon_p.x as usize] = 1;
+                parents[beacon_p.y as usize][beacon_p.x as usize] = worker.p;
+                queue.push_back((beacon_p, 1));
+            }
+        }
 
         while let Some((p, cost)) = queue.pop_front() {
             let y = p.y as usize;
@@ -463,7 +511,15 @@ impl Field {
                 while visited[p.y as usize][p.x as usize] != 0 {
                     let ppos = parents[p.y as usize][p.x as usize];
 
-                    let a = if p.y > ppos.y {
+                    let a = if using_teleport
+                        && self.get_booster_square(p)
+                            == (Square::Booster {
+                                code: BoosterCode::Beacon,
+                            })
+                        && ppos == worker.p
+                    {
+                        Action::Teleports { x: p.x, y: p.y }
+                    } else if p.y > ppos.y {
                         Action::MoveUp
                     } else if p.y < ppos.y {
                         Action::MoveDown
@@ -493,12 +549,22 @@ impl Field {
             let dx = vec![0, 0, 1, -1];
             'outer_loop: for dir in 0..4 {
                 let mut np = p;
-                for _d in 0..move_distance {
+                for d in 0..move_distance {
                     np.x += dx[dir];
                     np.y += dy[dir];
                     let movable = if drill {
                         self.in_map(np)
                     } else {
+                        if d == 1
+                            && 0 <= np.x
+                            && np.x < self.width() as i32
+                            && 0 <= np.y
+                            && np.y < self.height() as i32
+                            && visited[np.y as usize][np.x as usize] != -1
+                        {
+                            // ドリルが終わった直後にfastで掘った壁にぶつかろうとした場合
+                            continue 'outer_loop;
+                        }
                         self.movable(np)
                     };
                     if !movable {
@@ -715,6 +781,7 @@ impl Field {
             booster_field,
             rest_booster_cnts,
             rest_surface_cnt,
+            beacon_ps: vec![],
         }
     }
 }

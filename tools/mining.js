@@ -9,6 +9,8 @@ const publicId = '99';
 const wrapper = path.resolve('target/release/main_cloning');
 const puzzler = path.resolve('target/release/puzzler');
 
+const SOLVER_TRY_COUNT = 3;
+
 const webhookUrl = process.env['ICFPC2019_SLACK_WEBHOOK_URL'];
 if (!webhookUrl) {
   console.error('Please set ICFPC2019_SLACK_WEBHOOK_URL env');
@@ -67,13 +69,18 @@ function postMessageToSlack(message) {
 
 (async () => {
   let last = 0;
+  let count = SOLVER_TRY_COUNT;
   while (true) {
     console.log("Sleep 10 seconds ...");
     await new Promise(resolve => setTimeout(resolve, 10 * 1000));
 
     try {
-      const { block, puzzle, task, excluded } = (await getblockinfo()).result;
-      console.log(`block = ${block}`);
+      const { block, puzzle, task, excluded, block_ts } = (await getblockinfo()).result;
+      const restSec = block_ts + 15 * 60 - (new Date() / 1000);
+      if (restSec <= 0) {
+        continue;
+      }
+      console.log(`block = ${block} (start = ${block_ts}, rest = ${restSec} secs)`);
 
       if (last === block) {
         console.log(`This block is already submitted, skip.`);
@@ -93,24 +100,39 @@ function postMessageToSlack(message) {
       fs.writeFileSync(inPuzzlePath, puzzle);
       fs.writeFileSync(inTaskPath, task);
 
-      await new Promise((resolve, reject) => {
-        exec(`${wrapper} < ${inTaskPath} > ${outSolutionPath}`, error => {
+      postMessageToSlack(`Start: block = ${block}`);
+
+      let wrapperProcess = null;
+      const wrapperPromise = new Promise((resolve, reject) => {
+        wrapperProcess = exec(`${wrapper} -c ${count} < ${inTaskPath} > ${outSolutionPath}`, error => {
           if (error) {
             reject(error);
             return;
           }
-          resolve();
+          resolve(true);
         });
       });
-      await new Promise((resolve, reject) => {
-        exec(`${puzzler} < ${inPuzzlePath} > ${outTaskPath}`, error => {
+      let puzzleProcess = null;
+      const puzzlePromise = new Promise((resolve, reject) => {
+        puzzleProcess = exec(`${puzzler} < ${inPuzzlePath} > ${outTaskPath}`, error => {
           if (error) {
             reject(error);
             return;
           }
-          resolve();
+          resolve(true);
         });
       });
+      const wrapperLimit = new Promise(resolve => setTimeout(() => resolve(false), restSec * 1000));
+      const puzzleLimit = new Promise(resolve => setTimeout(() => resolve(false), restSec * 1000));
+
+      const wrapperSuccess = await Promise.race([wrapperPromise, wrapperLimit]);
+      const puzzleSuccess = await Promise.race([puzzlePromise, puzzleLimit]);
+      if (!wrapperSuccess || !puzzleSuccess) {
+        console.log(`Timeout!! wrapper success = ${wrapperSuccess}, puzzle success = ${puzzleSuccess}`);
+        if (!wrapperSuccess) { wrapperProcess.kill(9); }
+        if (!puzzleSuccess) { puzzleProcess.kill(9); }
+        throw new Error(`Timeout!! wrapper success = ${wrapperSuccess}, puzzle success = ${puzzleSuccess}`);
+      }
 
       const solutionResult = await utils.checkSolution(inTaskPath, outSolutionPath);
       if (!solutionResult.success) {
@@ -132,9 +154,11 @@ function postMessageToSlack(message) {
       console.log(`Done: ${JSON.stringify(result)}`);
       postMessageToSlack(`Submit Done: block = ${block}, timeunits = ${solutionResult.timeunits}, result = ${JSON.stringify(result)}`);
       last = block;
+      count = SOLVER_TRY_COUNT;
     } catch (e) {
       console.log(e);
-      postMessageToSlack(`mining.js: Error ${e}`);
+      postMessageToSlack(`@seikichi: mining.js: Error ${e}`);
+      count = 1;
     }
   }
 })();
