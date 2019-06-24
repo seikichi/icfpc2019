@@ -181,6 +181,16 @@ impl Grids {
         panic!("Failed to find ");
     }
 
+    // pub fn get_grid(&self, grid_id: i32) -> Vec<Point> {
+    //     let mut grid = vec![];
+    //     for y in 0..self.grid_ids.len() {
+    //         for x in 0..self.grid_ids[y].len() {
+    //             grid.push(Point::new(x as i32, y as i32));
+    //         }
+    //     }
+    //     grid
+    // }
+
     pub fn in_grid(&self, grid_id: i32, p: &Point) -> bool {
         self.grid_ids[p.y as usize][p.x as usize] == grid_id
     }
@@ -259,7 +269,7 @@ impl Grids {
                 ids[p.y as usize][p.x as usize] = i as i32;
             }
         }
-        for y in 0..ids.len() {
+        for y in (0..ids.len()).rev() {
             for x in 0..ids[y].len() {
                 eprint!("{: >3}", ids[y][x]);
             }

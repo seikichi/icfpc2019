@@ -137,7 +137,7 @@ impl CloningWrapper {
         for b in boosters {
             booster_cnts[*b as usize] += 1;
         }
-        let grid_num = 12; // TODO
+        let grid_num = 10; // TODO
         let mut grids = Grids::from(&field, grid_num);
         field.update_surface(&mut workers[0], &mut grids);
         CloningWrapper {
@@ -215,26 +215,43 @@ impl CloningWrapper {
         // TODO
         // - 近いやつにする
         // - pop じゃなくて flag を持たせて最後協力して grid を複数 worker で倒す
-        // if self.rest_grid_ids.is_empty() {
-        //     return None;
-        // }
+        if self.rest_grid_ids.is_empty() {
+            return None;
+        }
 
-        // let (p, _) = self
-        //     .field
-        //     .bfs(
-        //         &self.workers[index],
-        //         Square::Surface,
-        //         Point::new(-1, -1),
-        //         &vec![],
-        //         None,
-        //         None,
-        //     )
-        //     .unwrap();
-        // let grid_id = self.grids.grid_id_of(p);
-        // self.rest_grid_ids.retain(|&id| id != grid_id);
-
-        // Some(grid_id)
-        self.rest_grid_ids.pop()
+        let mut locked = vec![];
+        let mut grid_id = None;
+        loop {
+            if let Some((p, _)) = self.field.bfs(
+                &self.workers[index],
+                Square::Surface,
+                Point::new(-1, -1),
+                &locked,
+                None,
+                None,
+            ) {
+                let grid_id_candidate = self.grids.grid_id_of(p);
+                eprintln!(
+                    "p {:?}, candidate: {}, rest_grid_id: {:?}",
+                    p, grid_id_candidate, self.rest_grid_ids
+                );
+                // if !self.rest_grid_ids.contains(&grid_id_candidate) {
+                //     eprintln!("Grid already taken: {}", grid_id_candidate);
+                //     let mut grid = self.grids.get_grid(grid_id_candidate);
+                //     locked.append(&mut grid);
+                //     continue;
+                // } else {
+                eprintln!("Next grid: {}", grid_id_candidate);
+                self.rest_grid_ids.retain(|&id| id != grid_id_candidate);
+                grid_id = Some(grid_id_candidate);
+                break;
+            // }
+            } else {
+                eprintln!("No candidate grid");
+                break;
+            };
+        }
+        grid_id
     }
 
     fn one_worker_action(&mut self, index: usize, solution: &mut Vec<Vec<Action>>) {
