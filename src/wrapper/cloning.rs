@@ -321,16 +321,17 @@ impl CloningWrapper {
             self.field
                 .bfs(&self.workers[index], target, target_point, &lock, false)
         {
-            let (t_p, t_actions) = self
-                .field
-                .bfs(&self.workers[index], Square::Unknown, p, &vec![], true)
-                .unwrap();
-            assert!(p == t_p);
-            // assert!(t_actions.len() <= actions.len());
-            if t_actions.len() < actions.len() {
-                // fast, drillの時に経路の計算がおかしくて遠回りになるケースがあるのでassertは仕込まない
-                p = t_p;
-                actions = t_actions;
+            if let Some((t_p, t_actions)) =
+                self.field
+                    .bfs(&self.workers[index], Square::Unknown, p, &vec![], true)
+            {
+                // fast, drillの時に経路の計算がおかしくて遠回りになったり、たどり着けないケースがある
+                assert!(p == t_p);
+                // assert!(t_actions.len() <= actions.len());
+                if t_actions.len() < actions.len() {
+                    p = t_p;
+                    actions = t_actions;
+                }
             }
             if kind == GoalKind::Cloning {
                 actions.push(Action::Cloning);
