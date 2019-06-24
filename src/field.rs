@@ -2,6 +2,8 @@ use crate::solution::*;
 use crate::task::*;
 use crate::union_find::*;
 
+use rand::prelude::*;
+
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Worker {
     pub p: Point,
@@ -21,7 +23,7 @@ impl Worker {
             drill_time: 0,
         }
     }
-    pub fn movement(&mut self, p: Point, field: &mut Field) {
+    pub fn movement(&mut self, p: Point, field: &mut Field, grids: &mut Grids) {
         let cnt = if self.fast_time > 0 { 2 } else { 1 };
         for iter in 0..cnt {
             let np = self.p + p;
@@ -39,7 +41,7 @@ impl Worker {
                 continue;
             }
             self.p = np;
-            field.update_surface(self);
+            field.update_surface(self, grids);
         }
     }
     pub fn can_act(&self, action: Action, field: &Field, booster_cnts: &Vec<usize>) -> bool {
@@ -60,12 +62,12 @@ impl Worker {
             Action::AttachDrill => booster_cnts[BoosterCode::Drill as usize] > 0,
             Action::InstallBeacon => {
                 booster_cnts[BoosterCode::Teleport as usize] > 0
-                && field.booster_field[self.p.y as usize][self.p.x as usize] == Square::Unknown
+                    && field.booster_field[self.p.y as usize][self.p.x as usize] == Square::Unknown
             }
             Action::Teleports { x, y } => {
                 field.get_booster_square(Point::new(x, y))
                     == (Square::Booster {
-                        code: BoosterCode::Beacon
+                        code: BoosterCode::Beacon,
                     })
             }
             Action::Cloning => {
@@ -77,19 +79,25 @@ impl Worker {
             }
         }
     }
-    pub fn act(&mut self, action: Action, field: &mut Field, booster_cnts: &mut Vec<usize>) {
+    pub fn act(
+        &mut self,
+        action: Action,
+        field: &mut Field,
+        booster_cnts: &mut Vec<usize>,
+        grids: &mut Grids,
+    ) {
         match action {
             Action::MoveUp => {
-                self.movement(Point::new(0, 1), field);
+                self.movement(Point::new(0, 1), field, grids);
             }
             Action::MoveDown => {
-                self.movement(Point::new(0, -1), field);
+                self.movement(Point::new(0, -1), field, grids);
             }
             Action::MoveLeft => {
-                self.movement(Point::new(-1, 0), field);
+                self.movement(Point::new(-1, 0), field, grids);
             }
             Action::MoveRight => {
-                self.movement(Point::new(1, 0), field);
+                self.movement(Point::new(1, 0), field, grids);
             }
             Action::DoNothing => {}
             Action::AttachManipulator { dx, dy } => {
@@ -145,7 +153,7 @@ impl Worker {
         }
         self.fast_time -= 1;
         self.drill_time -= 1;
-        field.update_surface(self);
+        field.update_surface(self, grids);
     }
     fn check_manipulator_constraint(&self, p: Point) -> bool {
         let mut manipulators = self.manipulators.clone();
@@ -167,6 +175,135 @@ impl Worker {
             return false;
         }
         return true;
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
+pub struct Grids {
+    grid_ids: Vec<Vec<i32>>,
+    rest_surface_cnt: Vec<i32>,
+}
+
+impl Grids {
+    pub fn grid_id_of(&self, p: Point) -> i32 {
+        self.grid_ids[p.y as usize][p.x as usize]
+    }
+
+    pub fn wrap(&mut self, p: Point) {
+        let id = self.grid_ids[p.y as usize][p.x as usize];
+        self.rest_surface_cnt[id as usize] -= 1;
+    }
+
+    pub fn find_point(&self, grid_id: i32) -> Point {
+        for y in 0..self.grid_ids.len() {
+            for x in 0..self.grid_ids[y].len() {
+                if self.grid_ids[y][x] == grid_id {
+                    return Point::new(x as i32, y as i32);
+                }
+            }
+        }
+        panic!("Failed to find ");
+    }
+
+    // pub fn get_grid(&self, grid_id: i32) -> Vec<Point> {
+    //     let mut grid = vec![];
+    //     for y in 0..self.grid_ids.len() {
+    //         for x in 0..self.grid_ids[y].len() {
+    //             grid.push(Point::new(x as i32, y as i32));
+    //         }
+    //     }
+    //     grid
+    // }
+
+    pub fn in_grid(&self, grid_id: i32, p: &Point) -> bool {
+        self.grid_ids[p.y as usize][p.x as usize] == grid_id
+    }
+
+    pub fn is_finished(&self, grid_id: i32) -> bool {
+        self.rest_surface_cnt[grid_id as usize] <= 0
+    }
+
+    pub fn from(field: &Field, num: usize) -> Self {
+        let mut rng = rand::thread_rng();
+        // let mut rng = SmallRng::from_seed([1; 16]);
+        let mut initial_points: Vec<Point> = vec![];
+        for _ in 0..num {
+            loop {
+                let x = rng.next_u32() % field.width() as u32;
+                let y = rng.next_u32() % field.height() as u32;
+                if field[y as usize][x as usize] == Square::Obstacle
+                    || field[y as usize][x as usize] == Square::Unknown
+                {
+                    continue;
+                }
+                if initial_points
+                    .iter()
+                    .any(|p| p.x == x as i32 && p.y == y as i32)
+                {
+                    continue;
+                }
+                initial_points.push(Point::new(x as i32, y as i32));
+                break;
+            }
+        }
+
+        let mut grids = vec![];
+        let mut ques = vec![];
+        for i in 0..num {
+            let mut que = std::collections::VecDeque::new();
+            que.push_back(initial_points[i]);
+            ques.push(que);
+            grids.push(vec![]);
+        }
+
+        let mut visited = vec![vec![false; field.width()]; field.height()];
+        while !ques.iter().all(|q| q.is_empty()) {
+            for i in 0..num {
+                if let Some(cur) = ques[i].pop_back() {
+                    if visited[cur.y as usize][cur.x as usize] {
+                        continue;
+                    }
+                    visited[cur.y as usize][cur.x as usize] = true;
+                    grids[i].push(cur);
+
+                    let dx = [1, 0, -1, 0];
+                    let dy = [0, 1, 0, -1];
+                    for d in 0..4 {
+                        let npos = cur + Point::new(dx[d], dy[d]);
+
+                        if !field.in_map(npos) {
+                            continue;
+                        }
+                        if visited[npos.y as usize][npos.x as usize] {
+                            continue;
+                        }
+                        let s = field[npos.y as usize][npos.x as usize];
+                        if s == Square::Obstacle || s == Square::Unknown {
+                            continue;
+                        }
+                        ques[i].push_back(npos);
+                    }
+                }
+            }
+        }
+        let mut rest_surface_cnt = vec![0; num];
+        let mut ids = vec![vec![-1; field.width()]; field.height()];
+        for i in 0..num {
+            for p in &grids[i] {
+                rest_surface_cnt[i as usize] += 1;
+                ids[p.y as usize][p.x as usize] = i as i32;
+            }
+        }
+        // for y in (0..ids.len()).rev() {
+        //     for x in 0..ids[y].len() {
+        //         eprint!("{: >3}", ids[y][x]);
+        //     }
+        //     eprintln!("");
+        // }
+        Grids {
+            grid_ids: ids,
+            rest_surface_cnt,
+        }
     }
 }
 
@@ -226,7 +363,7 @@ impl Field {
     pub fn get_booster_square(&self, p: Point) -> Square {
         self.booster_field[p.y as usize][p.x as usize]
     }
-    pub fn update_surface(&mut self, worker: &Worker) {
+    pub fn update_surface(&mut self, worker: &Worker, grids: &mut Grids) {
         if (worker.drill_time > 0 && !self.in_map(worker.p))
             || (worker.drill_time <= 0 && !self.movable(worker.p))
         {
@@ -234,13 +371,13 @@ impl Field {
             panic!("can't move this postion");
         }
         // update wrapped surface
-        self.wrap(worker.p);
+        self.wrap(worker.p, grids);
         for &p in worker.manipulators.iter() {
             let p = worker.p + p;
             if !self.none_block(worker.p, p) {
                 continue;
             }
-            self.wrap(p);
+            self.wrap(p, grids);
         }
     }
     pub fn set_beacon(&mut self, p: Point) {
@@ -282,9 +419,10 @@ impl Field {
             _ => {}
         };
     }
-    pub fn wrap(&mut self, p: Point) {
+    pub fn wrap(&mut self, p: Point, grids: &mut Grids) {
         if self[p.y as usize][p.x as usize] == Square::Surface {
             self.rest_surface_cnt -= 1;
+            grids.wrap(p);
         }
         self[p.y as usize][p.x as usize] = Square::WrappedSurface;
     }
@@ -300,10 +438,10 @@ impl Field {
                 if x >= self.width() {
                     break;
                 }
-                let square = if self[y][x] != Square::Unknown {
-                    self[y][x]
-                } else {
+                let square = if self.booster_field[y][x] != Square::Unknown {
                     self.booster_field[y][x]
+                } else {
+                    self[y][x]
                 };
                 eprint!("{}", square.get_char());
             }
@@ -318,6 +456,9 @@ impl Field {
         target: Square,
         target_point: Point,
         lock: &Vec<Point>,
+        grids: Option<&Grids>,
+        grid_id: Option<i32>,
+        ban_grid_id: &Vec<i32>,
         using_teleport: bool,
     ) -> Option<(Point, Vec<Action>)> {
         let w = self.width();
@@ -348,9 +489,22 @@ impl Field {
         while let Some((p, cost)) = queue.pop_front() {
             let y = p.y as usize;
             let x = p.x as usize;
-            if (target != Square::Unknown
-                && (self[y][x] == target || self.booster_field[y][x] == target))
-                || p == target_point
+
+            let mut grid_ok = if grid_id.is_none() {
+                true
+            } else {
+                assert!(grids.is_some());
+                let id = grid_id.unwrap();
+                grids.unwrap().in_grid(id, &p)
+            };
+            for &ban_id in ban_grid_id.iter() {
+                grid_ok &= !grids.unwrap().in_grid(ban_id, &p);
+            }
+
+            if grid_ok
+                && ((target != Square::Unknown
+                    && (self[y][x] == target || self.booster_field[y][x] == target))
+                    || p == target_point)
             {
                 let mut p = p;
                 let end_p = Point::new(x as i32, y as i32);
@@ -506,7 +660,6 @@ impl Field {
         None
     }
 
-
     pub fn from(task: &Task) -> Self {
         let Map(map) = &task.map;
         let x = map.iter().map(|p| p.x).max().unwrap() as usize;
@@ -571,7 +724,6 @@ impl Field {
                 prev = p;
             }
         }
-
 
         // Find Surfaces with bfs from start point
         let w = field[0].len();
